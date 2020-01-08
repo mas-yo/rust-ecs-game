@@ -79,16 +79,16 @@ impl State for Game {
                 }
                 match key {
                     Key::A => {
-                        self.inputs.iter_mut().for_each(|i|{i.left = pressed;});
+                        self.inputs.iter_mut().for_each(|(_, i)|{i.left = pressed;});
                     }
                     Key::D => {
-                        self.inputs.iter_mut().for_each(|i|{i.right = pressed;});
+                        self.inputs.iter_mut().for_each(|(_, i)|{i.right = pressed;});
                     }
                     Key::W => {
-                        self.inputs.iter_mut().for_each(|i|{i.up = pressed;});
+                        self.inputs.iter_mut().for_each(|(_, i)|{i.up = pressed;});
                     }
                     Key::S => {
-                        self.inputs.iter_mut().for_each(|i|{i.down = pressed;});
+                        self.inputs.iter_mut().for_each(|(_, i)|{i.down = pressed;});
                     }
                     _ => {}
                 }

@@ -1,8 +1,5 @@
 use quicksilver::prelude::*;
 use std::collections::*;
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
-use std::slice::IterMut;
 
 pub(crate) type EntityID = u32;
 
@@ -21,17 +18,10 @@ impl<T> Component<T> {
     pub fn entity_id(&self) -> EntityID {
         self.entity_id
     }
-}
-
-impl<T> Deref for Component<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
+    pub fn inner(&self) -> &T {
         &self.inner
     }
-}
-
-impl<T> DerefMut for Component<T> {
-    fn deref_mut(&mut self) -> &mut T {
+    pub fn inner_mut(&mut self) -> &mut T {
         &mut self.inner
     }
 }
@@ -49,29 +39,129 @@ impl<T> ComponentContainer<T> {
         self.vec.push(Component::<T>::new(entity_id, item));
         self.map.insert(entity_id, self.vec.len() - 1);
     }
-    pub fn get(&self, entity_id: EntityID) -> Option<&Component<T>> {
+    pub fn get(&self, entity_id: EntityID) -> Option<&T> {
         let index = self.map.get(&entity_id)?;
-        Some(&self.vec[*index])
+        Some(self.vec[*index].inner())
     }
-    pub fn iter_mut(&mut self) -> IterMut<Component<T>> {
-        self.vec.iter_mut()
+    pub fn get_mut(&mut self, entity_id: EntityID) -> Option<&mut T> {
+        let index = self.map.get(&entity_id)?;
+        Some(self.vec[*index].inner_mut())
+    }
+    pub fn iter(&self) -> ComponentIter<T> {
+        ComponentIter { iter: self.vec.iter() }
+    }
+    pub fn iter_mut(&mut self) -> ComponentIterMut<T> {
+        ComponentIterMut { iter: self.vec.iter_mut() }
     }
 }
 
-pub(crate) fn get_component2<'a, 'b, T, U>(
-    c1: &'a CContainer<T>,
-    c2: &'b CContainer<U>,
-    entity_id: EntityID,
-) -> Option<(&'a Component<T>, &'b Component<U>)> {
-    let cmp1 = CContainer::<T>::get(c1, entity_id)?;
-    let cmp2 = CContainer::<U>::get(c2, entity_id)?;
-    Some((cmp1, cmp2))
+pub(crate) struct ComponentIter<'a, T> where T:'a {
+    iter: std::slice::Iter<'a, Component<T>>,
+}
+impl <'a, T> Iterator for ComponentIter<'a, T> {
+    type Item = (EntityID, &'a T);
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.iter.next()?;
+        Some((next.entity_id(), next.inner()))
+    }
+}
+impl <'a, T> ComponentIter<'a, T> {
+    pub fn zip_entity<U>(self, other: &'a CContainer<U>) -> ZipEntity<'a, T, U> {
+        ZipEntity { base: self, other: other }
+    }
+    pub fn zip_entity2<U, V>(self, other1: &'a CContainer<U>, other2: &'a CContainer<V>) -> ZipEntity2<'a, T, U, V> {
+        ZipEntity2 { base: self, other1: other1, other2: other2}
+    }
+}
+pub(crate) struct ComponentIterMut<'a, T> where T:'a {
+    iter: std::slice::IterMut<'a, Component<T>>,
+}
+impl <'a, T> Iterator for ComponentIterMut<'a, T> {
+    type Item = (EntityID, &'a mut T);
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.iter.next()?;
+        Some((next.entity_id(), next.inner_mut()))
+    }
+}
+impl <'a, T> ComponentIterMut<'a, T> {
+    pub fn zip_entity<U>(self, other: &'a CContainer<U>) -> ZipEntityMut<'a, T, U> {
+        ZipEntityMut { base: self, other: other }
+    }
+    pub fn zip_entity2<U, V>(self, other1: &'a CContainer<U>, other2: &'a CContainer<V>) -> ZipEntity2Mut<'a, T, U, V> {
+        ZipEntity2Mut { base: self, other1: other1, other2: other2}
+    }
 }
 
-impl<T> Deref for ComponentContainer<T> {
-    type Target = Vec<Component<T>>;
-    fn deref(&self) -> &Self::Target {
-        &self.vec
+pub(crate) struct ZipEntity<'a, T, U> where T: 'a, U: 'a {
+    base: ComponentIter<'a, T>,
+    other: &'a CContainer<U>,
+}
+
+impl<'a, T, U> Iterator for ZipEntity<'a, T, U> {
+    type Item = (&'a T, &'a U);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((entity_id, base)) = self.base.next() {
+            if let Some(other_item) = self.other.get(entity_id) {
+                return Some((base, other_item));
+            }
+        }
+        None
+    }
+}
+
+pub(crate) struct ZipEntityMut<'a, T, U> where T: 'a, U: 'a {
+    base: ComponentIterMut<'a, T>,
+    other: &'a CContainer<U>,
+}
+
+impl<'a, T, U> Iterator for ZipEntityMut<'a, T, U> {
+    type Item = (&'a mut T, &'a U);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((entity_id, base)) = self.base.next() {
+            if let Some(other_item) = self.other.get(entity_id) {
+                return Some((base, other_item));
+            }
+        }
+        None
+    }
+}
+pub(crate) struct ZipEntity2<'a, T, U, V> where T: 'a, U: 'a, V:'a {
+    base: ComponentIter<'a, T>,
+    other1: &'a CContainer<U>,
+    other2: &'a CContainer<V>,
+}
+
+impl<'a, T, U, V> Iterator for ZipEntity2<'a, T, U, V> {
+    type Item = (&'a T, &'a U, &'a V);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((entity_id, base)) = self.base.next() {
+            let other1_item = self.other1.get(entity_id);
+            let other2_item = self.other2.get(entity_id);
+            if other1_item.is_some() && other2_item.is_some() {
+                return Some((base, other1_item.unwrap(), other2_item.unwrap()));
+            }
+        }
+        None
+    }
+}
+
+pub(crate) struct ZipEntity2Mut<'a, T, U, V> where T: 'a, U: 'a, V:'a {
+    base: ComponentIterMut<'a, T>,
+    other1: &'a CContainer<U>,
+    other2: &'a CContainer<V>,
+}
+
+impl<'a, T, U, V> Iterator for ZipEntity2Mut<'a, T, U, V> {
+    type Item = (&'a mut T, &'a U, &'a V);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((entity_id, base)) = self.base.next() {
+            let other1_item = self.other1.get(entity_id);
+            let other2_item = self.other2.get(entity_id);
+            if other1_item.is_some() && other2_item.is_some() {
+                return Some((base, other1_item.unwrap(), other2_item.unwrap()));
+            }
+        }
+        None
     }
 }
 
