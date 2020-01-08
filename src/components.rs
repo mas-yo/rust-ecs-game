@@ -48,51 +48,87 @@ impl<T> ComponentContainer<T> {
         Some(self.vec[*index].inner_mut())
     }
     pub fn iter(&self) -> ComponentIter<T> {
-        ComponentIter { iter: self.vec.iter() }
+        ComponentIter {
+            iter: self.vec.iter(),
+        }
     }
     pub fn iter_mut(&mut self) -> ComponentIterMut<T> {
-        ComponentIterMut { iter: self.vec.iter_mut() }
+        ComponentIterMut {
+            iter: self.vec.iter_mut(),
+        }
     }
 }
 
-pub(crate) struct ComponentIter<'a, T> where T:'a {
+pub(crate) struct ComponentIter<'a, T>
+where
+    T: 'a,
+{
     iter: std::slice::Iter<'a, Component<T>>,
 }
-impl <'a, T> Iterator for ComponentIter<'a, T> {
+impl<'a, T> Iterator for ComponentIter<'a, T> {
     type Item = (EntityID, &'a T);
     fn next(&mut self) -> Option<Self::Item> {
         let next = self.iter.next()?;
         Some((next.entity_id(), next.inner()))
     }
 }
-impl <'a, T> ComponentIter<'a, T> {
+impl<'a, T> ComponentIter<'a, T> {
     pub fn zip_entity<U>(self, other: &'a CContainer<U>) -> ZipEntity<'a, T, U> {
-        ZipEntity { base: self, other: other }
+        ZipEntity {
+            base: self,
+            other: other,
+        }
     }
-    pub fn zip_entity2<U, V>(self, other1: &'a CContainer<U>, other2: &'a CContainer<V>) -> ZipEntity2<'a, T, U, V> {
-        ZipEntity2 { base: self, other1: other1, other2: other2}
+    pub fn zip_entity2<U, V>(
+        self,
+        other1: &'a CContainer<U>,
+        other2: &'a CContainer<V>,
+    ) -> ZipEntity2<'a, T, U, V> {
+        ZipEntity2 {
+            base: self,
+            other1: other1,
+            other2: other2,
+        }
     }
 }
-pub(crate) struct ComponentIterMut<'a, T> where T:'a {
+pub(crate) struct ComponentIterMut<'a, T>
+where
+    T: 'a,
+{
     iter: std::slice::IterMut<'a, Component<T>>,
 }
-impl <'a, T> Iterator for ComponentIterMut<'a, T> {
+impl<'a, T> Iterator for ComponentIterMut<'a, T> {
     type Item = (EntityID, &'a mut T);
     fn next(&mut self) -> Option<Self::Item> {
         let next = self.iter.next()?;
         Some((next.entity_id(), next.inner_mut()))
     }
 }
-impl <'a, T> ComponentIterMut<'a, T> {
+impl<'a, T> ComponentIterMut<'a, T> {
     pub fn zip_entity<U>(self, other: &'a CContainer<U>) -> ZipEntityMut<'a, T, U> {
-        ZipEntityMut { base: self, other: other }
+        ZipEntityMut {
+            base: self,
+            other: other,
+        }
     }
-    pub fn zip_entity2<U, V>(self, other1: &'a CContainer<U>, other2: &'a CContainer<V>) -> ZipEntity2Mut<'a, T, U, V> {
-        ZipEntity2Mut { base: self, other1: other1, other2: other2}
+    pub fn zip_entity2<U, V>(
+        self,
+        other1: &'a CContainer<U>,
+        other2: &'a CContainer<V>,
+    ) -> ZipEntity2Mut<'a, T, U, V> {
+        ZipEntity2Mut {
+            base: self,
+            other1: other1,
+            other2: other2,
+        }
     }
 }
 
-pub(crate) struct ZipEntity<'a, T, U> where T: 'a, U: 'a {
+pub(crate) struct ZipEntity<'a, T, U>
+where
+    T: 'a,
+    U: 'a,
+{
     base: ComponentIter<'a, T>,
     other: &'a CContainer<U>,
 }
@@ -109,7 +145,11 @@ impl<'a, T, U> Iterator for ZipEntity<'a, T, U> {
     }
 }
 
-pub(crate) struct ZipEntityMut<'a, T, U> where T: 'a, U: 'a {
+pub(crate) struct ZipEntityMut<'a, T, U>
+where
+    T: 'a,
+    U: 'a,
+{
     base: ComponentIterMut<'a, T>,
     other: &'a CContainer<U>,
 }
@@ -125,7 +165,12 @@ impl<'a, T, U> Iterator for ZipEntityMut<'a, T, U> {
         None
     }
 }
-pub(crate) struct ZipEntity2<'a, T, U, V> where T: 'a, U: 'a, V:'a {
+pub(crate) struct ZipEntity2<'a, T, U, V>
+where
+    T: 'a,
+    U: 'a,
+    V: 'a,
+{
     base: ComponentIter<'a, T>,
     other1: &'a CContainer<U>,
     other2: &'a CContainer<V>,
@@ -145,7 +190,12 @@ impl<'a, T, U, V> Iterator for ZipEntity2<'a, T, U, V> {
     }
 }
 
-pub(crate) struct ZipEntity2Mut<'a, T, U, V> where T: 'a, U: 'a, V:'a {
+pub(crate) struct ZipEntity2Mut<'a, T, U, V>
+where
+    T: 'a,
+    U: 'a,
+    V: 'a,
+{
     base: ComponentIterMut<'a, T>,
     other1: &'a CContainer<U>,
     other2: &'a CContainer<V>,
