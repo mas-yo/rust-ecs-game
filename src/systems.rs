@@ -3,25 +3,24 @@ use quicksilver::prelude::*;
 use std::marker::PhantomData;
 
 pub(crate) trait SystemInterface {
-    type Ref;
-    type RefMut;
+    type Update;
+    type Refer;
 }
 pub(crate) trait SystemProcess: SystemInterface {
-    fn process(_ref: &Self::Ref, _refmut: &mut Self::RefMut);
+    fn process(update: &mut Self::Update, _ref: &Self::Refer);
 }
 
-#[derive(Default)]
-pub(crate) struct System<R, M> {
-    phantom: PhantomData<(R, M)>,
+pub(crate) struct System<U, R> {
+    phantom: PhantomData<(U, R)>,
 }
 
-impl<R, M> SystemInterface for System<R, M> {
-    type Ref = R;
-    type RefMut = M;
+impl<U, R> SystemInterface for System<U, R> {
+    type Update = U;
+    type Refer = R;
 }
 
-impl SystemProcess for System<CContainer<Input>, CContainer<Velocity>> {
-    fn process(inputs: &Self::Ref, velocities: &mut Self::RefMut) {
+impl SystemProcess for System<CContainer<Velocity>, CContainer<Input>> {
+    fn process(velocities: &mut Self::Update, inputs: &Self::Refer) {
         velocities
             .iter_mut()
             .zip_entity(inputs)
@@ -44,8 +43,8 @@ impl SystemProcess for System<CContainer<Input>, CContainer<Velocity>> {
     }
 }
 
-impl SystemProcess for System<(&CContainer<Team>, &CContainer<Position>), CContainer<MoveTarget>> {
-    fn process(team_pos: &Self::Ref, move_targets: &mut Self::RefMut) {
+impl SystemProcess for System<CContainer<MoveTarget>, (&CContainer<Team>, &CContainer<Position>)> {
+    fn process(move_targets: &mut Self::Update, team_pos: &Self::Refer) {
         let (teams, positions) = team_pos;
         move_targets
             .iter_mut()
@@ -71,9 +70,9 @@ impl SystemProcess for System<(&CContainer<Team>, &CContainer<Position>), CConta
 }
 
 impl SystemProcess
-    for System<(&CContainer<Position>, &CContainer<MoveTarget>), CContainer<Velocity>>
+    for System<CContainer<Velocity>, (&CContainer<Position>, &CContainer<MoveTarget>)>
 {
-    fn process(pos_tgt: &Self::Ref, velocities: &mut Self::RefMut) {
+    fn process(velocities: &mut Self::Update, pos_tgt: &Self::Refer) {
         velocities
             .iter_mut()
             .zip_entity2(pos_tgt.0, pos_tgt.1)
@@ -87,8 +86,8 @@ impl SystemProcess
     }
 }
 
-impl SystemProcess for System<CContainer<Velocity>, CContainer<Position>> {
-    fn process(velocities: &Self::Ref, positions: &mut Self::RefMut) {
+impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
+    fn process(positions: &mut Self::Update, velocities: &Self::Refer) {
         positions
             .iter_mut()
             .zip_entity(velocities)
@@ -99,8 +98,8 @@ impl SystemProcess for System<CContainer<Velocity>, CContainer<Position>> {
     }
 }
 
-impl SystemProcess for System<CContainer<Position>, CContainer<CharacterView>> {
-    fn process(positions: &Self::Ref, views: &mut Self::RefMut) {
+impl SystemProcess for System<CContainer<CharacterView>, CContainer<Position>> {
+    fn process(views: &mut Self::Update, positions: &Self::Refer) {
         views
             .iter_mut()
             .zip_entity(positions)
@@ -112,13 +111,13 @@ impl SystemProcess for System<CContainer<Position>, CContainer<CharacterView>> {
     }
 }
 
-impl SystemProcess for System<CContainer<CharacterView>, Window> {
-    fn process(views: &Self::Ref, window: &mut Self::RefMut) {
+impl SystemProcess for System<Window, CContainer<CharacterView>> {
+    fn process(window: &mut Self::Update, views: &Self::Refer) {
         views.iter().for_each(|(_, view)| {
             window.draw(
                 &Circle::new((view.position.x, view.position.y), view.radius),
                 Col(view.color),
             );
-        })
+        });
     }
 }

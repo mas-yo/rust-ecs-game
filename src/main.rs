@@ -10,7 +10,7 @@ use systems::*;
 struct Game {
     current_entity_id: EntityID,
     inputs: CContainer<Input>,
-    static_status: CContainer<Team>,
+    teams: CContainer<Team>,
     move_targets: CContainer<MoveTarget>,
     positions: CContainer<Position>,
     velocities: CContainer<Velocity>,
@@ -22,7 +22,7 @@ impl Game {
         let entity_id = self.current_entity_id;
 
         self.inputs.push(entity_id, Input::default());
-        self.static_status.push(entity_id, Team::new(0));
+        self.teams.push(entity_id, Team::new(0));
         self.positions.push(
             entity_id,
             Position {
@@ -47,7 +47,7 @@ impl Game {
         let entity_id = self.current_entity_id;
 
         self.move_targets.push(entity_id, MoveTarget::default());
-        self.static_status.push(entity_id, Team::new(1));
+        self.teams.push(entity_id, Team::new(1));
         self.positions
             .push(entity_id, Position { x: 10f32, y: 10f32 });
         self.velocities.push(entity_id, Velocity::default());
@@ -78,13 +78,13 @@ impl State for Game {
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
         System::process(
-            &(&self.static_status, &self.positions),
             &mut self.move_targets,
+            &(&self.teams, &self.positions),
         );
-        System::process(&self.inputs, &mut self.velocities);
-        System::process(&(&self.positions, &self.move_targets), &mut self.velocities);
-        System::process(&self.velocities, &mut self.positions);
-        System::process(&self.positions, &mut self.character_views);
+        System::process(&mut self.velocities, &self.inputs);
+        System::process( &mut self.velocities, &(&self.positions, &self.move_targets));
+        System::process(&mut self.positions, &self.velocities);
+        System::process(&mut self.character_views, &self.positions );
         Ok(())
     }
     /// Process an incoming event
@@ -130,7 +130,7 @@ impl State for Game {
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
-        System::process(&self.character_views, window);
+        System::process(window, &self.character_views);
         Ok(())
     }
 }
