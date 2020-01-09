@@ -1,3 +1,3 @@
 # rust-ecs-game
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/mas-yo/rust-ecs-game/tree/step-2)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/mas-yo/rust-ecs-game/tree/step-3)
