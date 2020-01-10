@@ -8,7 +8,7 @@ use systems::*;
 
 #[derive(Default)]
 struct Game {
-    current_entity_id: EntityID,
+    next_entity_id: EntityID,
     inputs: CContainer<Input>,
     teams: CContainer<Team>,
     move_targets: CContainer<MoveTarget>,
@@ -19,7 +19,7 @@ struct Game {
 
 impl Game {
     fn create_hero(&mut self) {
-        let entity_id = self.current_entity_id;
+        let entity_id = self.next_entity_id;
 
         self.inputs.push(entity_id, Input::default());
         self.teams.push(entity_id, Team::new(0));
@@ -40,11 +40,11 @@ impl Game {
             },
         );
 
-        self.current_entity_id = self.current_entity_id + 1;
+        self.next_entity_id = self.next_entity_id + 1;
     }
 
     fn create_enemy(&mut self) {
-        let entity_id = self.current_entity_id;
+        let entity_id = self.next_entity_id;
 
         self.move_targets.push(entity_id, MoveTarget::default());
         self.teams.push(entity_id, Team::new(1));
@@ -60,7 +60,7 @@ impl Game {
             },
         );
 
-        self.current_entity_id = self.current_entity_id + 1;
+        self.next_entity_id = self.next_entity_id + 1;
     }
 }
 
