@@ -77,14 +77,14 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
-        System::process(
-            &mut self.move_targets,
-            &(&self.teams, &self.positions),
-        );
+        System::process(&mut self.move_targets, &(&self.teams, &self.positions));
         System::process(&mut self.velocities, &self.inputs);
-        System::process( &mut self.velocities, &(&self.positions, &self.move_targets));
+        System::process(&mut self.velocities, &(&self.positions, &self.move_targets));
         System::process(&mut self.positions, &self.velocities);
-        System::process(&mut self.character_views, &self.positions );
+        System::process(
+            &mut self.character_views,
+            &(&self.positions, &self.velocities),
+        );
         Ok(())
     }
     /// Process an incoming event
@@ -136,5 +136,6 @@ impl State for Game {
 }
 
 fn main() {
+    web_logger::init();
     run::<Game>("Game", Vector::new(800, 600), Settings::default());
 }

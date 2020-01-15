@@ -1,6 +1,8 @@
 use crate::components::*;
 use quicksilver::prelude::*;
+use std::f32::consts::*;
 use std::marker::PhantomData;
+use web_logger;
 
 pub(crate) trait SystemInterface {
     type Update;
@@ -98,15 +100,19 @@ impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
     }
 }
 
-impl SystemProcess for System<CContainer<CharacterView>, CContainer<Position>> {
-    fn process(views: &mut Self::Update, positions: &Self::Refer) {
+impl SystemProcess
+    for System<CContainer<CharacterView>, (&CContainer<Position>, &CContainer<Velocity>)>
+{
+    fn process(views: &mut Self::Update, pos_vel: &Self::Refer) {
         views
             .iter_mut()
-            .zip_entity(positions)
-            .for_each(|(view, pos)| {
+            .zip_entity2(pos_vel.0, pos_vel.1)
+            .for_each(|(view, pos, vel)| {
                 view.position.x = pos.x;
                 view.position.y = pos.y;
-                view.direction = 0f32;
+                if vel.x != 0f32 || vel.y != 0f32 {
+                    view.direction = vel.y.atan2(vel.x);
+                }
             });
     }
 }
@@ -116,6 +122,14 @@ impl SystemProcess for System<Window, CContainer<CharacterView>> {
         views.iter().for_each(|(_, view)| {
             window.draw(
                 &Circle::new((view.position.x, view.position.y), view.radius),
+                Col(view.color),
+            );
+            let line_end = (
+                view.position.x + view.direction.cos() * view.radius * 1.8f32,
+                view.position.y + view.direction.sin() * view.radius * 1.8f32,
+            );
+            window.draw(
+                &Line::new((view.position.x, view.position.y), line_end),
                 Col(view.color),
             );
         });
