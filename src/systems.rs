@@ -1,8 +1,8 @@
 use crate::components::*;
 use quicksilver::prelude::*;
 use std::f32::consts::*;
+use std::hash::Hash;
 use std::marker::PhantomData;
-use web_logger;
 
 pub(crate) trait SystemInterface {
     type Update;
@@ -15,10 +15,25 @@ pub(crate) trait SystemProcess: SystemInterface {
 pub(crate) struct System<U, R> {
     phantom: PhantomData<(U, R)>,
 }
-
 impl<U, R> SystemInterface for System<U, R> {
     type Update = U;
     type Refer = R;
+}
+
+impl SystemProcess for System<CContainer<ObjectState>, CContainer<Input>> {
+    fn process(states: &mut Self::Update, inputs: &Self::Refer) {
+        states
+            .iter_mut()
+            .zip_entity(inputs)
+            .for_each(|(state, input)| {
+                if input.attack {
+                    *state = ObjectState::Attack;
+                }
+                else {
+                    *state = ObjectState::Wait;
+                }
+            });
+    }
 }
 
 impl SystemProcess for System<CContainer<Velocity>, CContainer<Input>> {
@@ -97,6 +112,15 @@ impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
                 pos.x += vel.x;
                 pos.y += vel.y;
             });
+    }
+}
+
+impl<K, V> SystemProcess for System<CContainer<Animator<K, V>>, ()>
+where
+    K: Hash + Eq + Copy,
+{
+    fn process(animators: &mut Self::Update, _: &Self::Refer) {
+        animators.iter_mut().for_each(|(_, a)| a.update());
     }
 }
 

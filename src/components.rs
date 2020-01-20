@@ -1,5 +1,6 @@
 use quicksilver::prelude::*;
 use std::collections::*;
+use std::hash::Hash;
 
 pub(crate) type EntityID = u32;
 
@@ -229,12 +230,23 @@ impl Team {
     }
 }
 
+pub(crate) enum ObjectState {
+    Wait,
+    Attack,
+}
+impl Default for ObjectState {
+    fn default() -> Self {
+        ObjectState::Wait
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct Input {
     pub left: bool,
     pub right: bool,
     pub up: bool,
     pub down: bool,
+    pub attack: bool,
 }
 
 pub(crate) type MoveTarget = Vector;
@@ -249,4 +261,58 @@ pub(crate) struct CharacterView {
     pub direction: f32,
     pub radius: f32,
     pub color: Color,
+    pub weapon_direction: f32,
+}
+
+#[derive(Default)]
+pub(crate) struct CharacterMotion {
+    pub radius_sclale: f32,
+    pub weapon_direction: f32,
+}
+
+#[derive(Default)]
+pub(crate) struct Animator<K, V>
+where
+    K: Hash + Eq,
+{
+    playing_id: Option<K>,
+    current_frame: usize,
+    animations: HashMap<K, Animation<V>>,
+}
+
+impl<K, V> Animator<K, V>
+where
+    K: Hash + Eq + Copy,
+{
+    pub fn play(&mut self, animation_id: K) {
+        self.playing_id = Some(animation_id);
+        self.current_frame = 0;
+    }
+    pub fn stop(&mut self) {
+        self.playing_id = None;
+    }
+    pub fn update(&mut self) {
+        if let Some(id) = self.playing_id {
+            if let Some(anim) = self.animations.get(&id) {
+                self.current_frame += 1;
+                if anim.looped {
+                    self.current_frame = 0;
+                }
+            }
+        }
+    }
+    pub fn register(&mut self, id: K, anim: Animation<V>) {
+        self.animations.insert(id, anim);
+    }
+    pub fn value(&self) -> Option<&V> {
+        let id = self.playing_id?;
+        let anim = self.animations.get(&id)?;
+        anim.values.get(self.current_frame)
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct Animation<T> {
+    looped: bool,
+    values: Vec<T>,
 }

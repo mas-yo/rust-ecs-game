@@ -6,14 +6,27 @@ mod systems;
 use components::*;
 use systems::*;
 
+#[derive(Hash, PartialEq, Eq)]
+enum CharacterMotionId {
+    Wait,
+}
+
+impl Default for CharacterMotionId {
+    fn default() -> Self {
+        CharacterMotionId::Wait
+    }
+}
+
 #[derive(Default)]
 struct Game {
     next_entity_id: EntityID,
     inputs: CContainer<Input>,
     teams: CContainer<Team>,
+    states: CContainer<ObjectState>,
     move_targets: CContainer<MoveTarget>,
     positions: CContainer<Position>,
     velocities: CContainer<Velocity>,
+    animators: CContainer<Animator<CharacterMotionId, CharacterMotion>>,
     character_views: CContainer<CharacterView>,
 }
 
@@ -118,6 +131,11 @@ impl State for Game {
                     Key::S => {
                         self.inputs.iter_mut().for_each(|(_, i)| {
                             i.down = pressed;
+                        });
+                    }
+                    Key::Space => {
+                        self.inputs.iter_mut().for_each(|(_, i)| {
+                            i.attack = pressed;
                         });
                     }
                     _ => {}
