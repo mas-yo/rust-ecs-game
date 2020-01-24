@@ -1,38 +1,164 @@
 use quicksilver::prelude::*;
-
+use std::f32::consts::*;
 mod components;
 mod systems;
 
 use components::*;
 use systems::*;
 
-#[derive(Hash, PartialEq, Eq)]
-enum CharacterMotionId {
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+pub(crate) enum CharacterAnimID {
     Wait,
+    Attack,
 }
 
-impl Default for CharacterMotionId {
+impl Default for CharacterAnimID {
     fn default() -> Self {
-        CharacterMotionId::Wait
+        CharacterAnimID::Wait
     }
 }
+
+// #[derive(Clone, Copy, PartialEq)]
+// pub(crate) enum CharacterStateID {
+//     Wait,
+//     Attack,
+// }
+// impl Default for CharacterStateID {
+//     fn default() -> Self {
+//         CharacterStateID::Wait
+//     }
+// }
+
+type CharacterAnimator = Animator<CharacterAnimID, CharacterAnimFrame>;
+// type CharacterState = ObjectState<CharacterStateID>;
+type CharacterStateObserver = ValueObserver<CharacterState, CharacterState>;
+type CharacterAnimEndObserver = ValueObserver<bool, CharacterAnimator>;
 
 #[derive(Default)]
 struct Game {
     next_entity_id: EntityID,
+    character_state_observer: CContainer<CharacterStateObserver>,
+    character_anim_end_observer: CContainer<CharacterAnimEndObserver>,
     inputs: CContainer<Input>,
     teams: CContainer<Team>,
-    states: CContainer<ObjectState>,
+    character_states: CContainer<CharacterState>,
     move_targets: CContainer<MoveTarget>,
     positions: CContainer<Position>,
     velocities: CContainer<Velocity>,
-    animators: CContainer<Animator<CharacterMotionId, CharacterMotion>>,
+    character_animators: CContainer<CharacterAnimator>,
     character_views: CContainer<CharacterView>,
 }
 
 impl Game {
+    fn wait_animation() -> Animation<CharacterAnimFrame> {
+        let mut frames = vec![
+            CharacterAnimFrame {
+                radius_scale: 1.0f32,
+                weapon_direction: 0f32,
+            };
+            58
+        ];
+
+        frames.push(CharacterAnimFrame {
+            radius_scale: 1.1f32,
+            ..Default::default()
+        });
+        frames.push(CharacterAnimFrame {
+            radius_scale: 1.1f32,
+            ..Default::default()
+        });
+
+        Animation::new(true, frames)
+    }
+
+    fn attack_animation() -> Animation<CharacterAnimFrame> {
+        let mut frames = vec![
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: -FRAC_PI_4,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: -FRAC_PI_4,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: -FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: -FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: 0f32,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: 0f32,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: FRAC_PI_4,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: FRAC_PI_4,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: FRAC_PI_4 + FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: FRAC_PI_4 + FRAC_PI_8,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: 0f32,
+            },
+            CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: 0f32,
+            },
+        ];
+        Animation::new(false, frames)
+    }
+
     fn create_hero(&mut self) {
         let entity_id = self.next_entity_id;
+
+        fn exact<T>(value: &T) -> T
+        where
+            T: Copy,
+        {
+            *value
+        }
+        self.character_state_observer.push(
+            entity_id,
+            CharacterStateObserver::new(CharacterState::default(), exact::<CharacterState>),
+        );
+
+        self.character_anim_end_observer.push(
+            entity_id,
+            CharacterAnimEndObserver::new(false, CharacterAnimator::is_end),
+        );
 
         self.inputs.push(entity_id, Input::default());
         self.teams.push(entity_id, Team::new(0));
@@ -44,11 +170,22 @@ impl Game {
             },
         );
         self.velocities.push(entity_id, Velocity::default());
+
+        self.character_states
+            .push(entity_id, CharacterState::default());
+
+        let mut animator = CharacterAnimator::default();
+        animator.register(CharacterAnimID::Wait, Self::wait_animation());
+        animator.register(CharacterAnimID::Attack, Self::attack_animation());
+        animator.play(CharacterAnimID::Wait);
+        self.character_animators.push(entity_id, animator);
+
         self.character_views.push(
             entity_id,
             CharacterView {
                 color: Color::GREEN,
                 radius: 10f32,
+                radius_scale: 1f32,
                 ..Default::default()
             },
         );
@@ -69,6 +206,7 @@ impl Game {
             CharacterView {
                 color: Color::RED,
                 radius: 15f32,
+                radius_scale: 1f32,
                 ..Default::default()
             },
         );
@@ -90,14 +228,43 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
+        System::process(
+            &mut self.character_state_observer,
+            &(&self.character_states, ForObserverSet()),
+        );
+        System::process(
+            &mut self.character_anim_end_observer,
+            &(&self.character_animators, ForObserverSet()),
+        );
+
+        System::process(
+            &mut self.character_states,
+            &(&self.inputs, &self.character_anim_end_observer),
+        );
         System::process(&mut self.move_targets, &(&self.teams, &self.positions));
         System::process(&mut self.velocities, &self.inputs);
         System::process(&mut self.velocities, &(&self.positions, &self.move_targets));
         System::process(&mut self.positions, &self.velocities);
         System::process(
+            &mut self.character_animators,
+            &self.character_state_observer,
+        );
+        System::process(&mut self.character_animators, &());
+        System::process(&mut self.character_views, &self.character_animators);
+        System::process(
             &mut self.character_views,
             &(&self.positions, &self.velocities),
         );
+
+        System::process(
+            &mut self.character_state_observer,
+            &(&self.character_states, ForObserverCheck()),
+        );
+        System::process(
+            &mut self.character_anim_end_observer,
+            &(&self.character_animators, ForObserverCheck()),
+        );
+
         Ok(())
     }
     /// Process an incoming event
@@ -134,6 +301,7 @@ impl State for Game {
                         });
                     }
                     Key::Space => {
+                        // log::info!("space");
                         self.inputs.iter_mut().for_each(|(_, i)| {
                             i.attack = pressed;
                         });

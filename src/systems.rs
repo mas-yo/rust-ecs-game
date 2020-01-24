@@ -1,4 +1,5 @@
 use crate::components::*;
+use crate::*;
 use quicksilver::prelude::*;
 use std::f32::consts::*;
 use std::hash::Hash;
@@ -20,17 +21,59 @@ impl<U, R> SystemInterface for System<U, R> {
     type Refer = R;
 }
 
-impl SystemProcess for System<CContainer<ObjectState>, CContainer<Input>> {
-    fn process(states: &mut Self::Update, inputs: &Self::Refer) {
+pub(crate) struct ForObserverSet();
+pub(crate) struct ForObserverCheck();
+
+impl<V, C> SystemProcess
+    for System<CContainer<ValueObserver<V, C>>, (&CContainer<C>, ForObserverSet)>
+where
+    V: PartialEq + Copy,
+{
+    fn process(observers: &mut Self::Update, (components, _): &Self::Refer) {
+        observers
+            .iter_mut()
+            .zip_entity(components)
+            .for_each(|(observer, component)| {
+                observer.set(component);
+            });
+    }
+}
+
+impl<V, C> SystemProcess
+    for System<CContainer<ValueObserver<V, C>>, (&CContainer<C>, ForObserverCheck)>
+where
+    V: PartialEq + Copy,
+{
+    fn process(observers: &mut Self::Update, components: &Self::Refer) {
+        observers
+            .iter_mut()
+            .zip_entity(components.0)
+            .for_each(|(observer, component)| {
+                observer.check(component);
+            });
+    }
+}
+
+impl SystemProcess
+    for System<
+        CContainer<CharacterState>,
+        (&CContainer<Input>, &CContainer<CharacterAnimEndObserver>),
+    >
+{
+    fn process(states: &mut Self::Update, (inputs, anim_observers): &Self::Refer) {
         states
             .iter_mut()
-            .zip_entity(inputs)
-            .for_each(|(state, input)| {
-                if input.attack {
-                    *state = ObjectState::Attack;
+            .zip_entity2(inputs, anim_observers)
+            .for_each(|(state, input, anim_observer)| match state {
+                CharacterState::Wait => {
+                    if input.attack {
+                        *state = CharacterState::Attack;
+                    }
                 }
-                else {
-                    *state = ObjectState::Wait;
+                CharacterState::Attack => {
+                    if anim_observer.is_changed() {
+                        *state = CharacterState::Wait;
+                    }
                 }
             });
     }
@@ -115,12 +158,47 @@ impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
     }
 }
 
+impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<CharacterStateObserver>> {
+    fn process(animators: &mut Self::Update, state_observers: &Self::Refer) {
+        animators
+            .iter_mut()
+            .zip_entity(state_observers)
+            .for_each(|(anim, state_observer)| {
+                if state_observer.is_changed() {
+                    match state_observer.value() {
+                        CharacterState::Wait => {
+                            anim.play(CharacterAnimID::Wait);
+                        }
+                        CharacterState::Attack => {
+                            log::info!("attack");
+                            anim.play(CharacterAnimID::Attack);
+                        }
+                    }
+                }
+            });
+    }
+}
+
 impl<K, V> SystemProcess for System<CContainer<Animator<K, V>>, ()>
 where
     K: Hash + Eq + Copy,
 {
     fn process(animators: &mut Self::Update, _: &Self::Refer) {
         animators.iter_mut().for_each(|(_, a)| a.update());
+    }
+}
+
+impl SystemProcess for System<CContainer<CharacterView>, CContainer<CharacterAnimator>> {
+    fn process(views: &mut Self::Update, animators: &Self::Refer) {
+        views
+            .iter_mut()
+            .zip_entity(animators)
+            .for_each(|(view, animator)| {
+                if let Some(val) = animator.value() {
+                    view.radius_scale = val.radius_scale;
+                    view.weapon_direction = val.weapon_direction;
+                }
+            });
     }
 }
 
@@ -144,13 +222,19 @@ impl SystemProcess
 impl SystemProcess for System<Window, CContainer<CharacterView>> {
     fn process(window: &mut Self::Update, views: &Self::Refer) {
         views.iter().for_each(|(_, view)| {
+            // log::info!("r {}", view.radius_scale);
+
             window.draw(
-                &Circle::new((view.position.x, view.position.y), view.radius),
+                &Circle::new(
+                    (view.position.x, view.position.y),
+                    view.radius * view.radius_scale,
+                ),
                 Col(view.color),
             );
+            let dir = view.direction + view.weapon_direction;
             let line_end = (
-                view.position.x + view.direction.cos() * view.radius * 1.8f32,
-                view.position.y + view.direction.sin() * view.radius * 1.8f32,
+                view.position.x + dir.cos() * view.radius * 1.8f32,
+                view.position.y + dir.sin() * view.radius * 1.8f32,
             );
             window.draw(
                 &Line::new((view.position.x, view.position.y), line_end),

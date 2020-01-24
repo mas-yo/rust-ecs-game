@@ -1,6 +1,7 @@
 use quicksilver::prelude::*;
 use std::collections::*;
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 pub(crate) type EntityID = u32;
 
@@ -29,10 +30,19 @@ impl<T> Component<T> {
 
 pub(crate) type CContainer<T> = ComponentContainer<T>;
 
-#[derive(Default)]
+// #[derive(Default)]
 pub(crate) struct ComponentContainer<T> {
     map: HashMap<EntityID, usize>,
     vec: Vec<Component<T>>,
+}
+
+impl<T> Default for ComponentContainer<T> {
+    fn default() -> Self {
+        Self {
+            map: HashMap::new(),
+            vec: Vec::new(),
+        }
+    }
 }
 
 impl<T> ComponentContainer<T> {
@@ -230,13 +240,44 @@ impl Team {
     }
 }
 
-pub(crate) enum ObjectState {
+// #[derive(Default)]
+// pub(crate) struct ObjectState<T> {
+//     changed: bool,
+//     state: T,
+// }
+
+// impl<T> ObjectState<T>
+// where
+//     T: PartialEq + Copy,
+// {
+//     pub fn new(state: T) -> Self {
+//         Self {
+//             changed: true,
+//             state: state,
+//         }
+//     }
+//     pub fn set(&mut self, state: T) {
+//         self.changed = self.state != state;
+//         self.state = state;
+//     }
+//     pub fn state(&self) -> T {
+//         self.state
+//     }
+//     pub fn check_changed(&mut self) -> bool {
+//         let changed = self.changed;
+//         self.changed = false;
+//         changed
+//     }
+// }
+
+#[derive(PartialEq, Clone, Copy)]
+pub(crate) enum CharacterState {
     Wait,
     Attack,
 }
-impl Default for ObjectState {
+impl Default for CharacterState {
     fn default() -> Self {
-        ObjectState::Wait
+        CharacterState::Wait
     }
 }
 
@@ -260,13 +301,14 @@ pub(crate) struct CharacterView {
     pub position: Vector,
     pub direction: f32,
     pub radius: f32,
+    pub radius_scale: f32,
     pub color: Color,
     pub weapon_direction: f32,
 }
 
-#[derive(Default)]
-pub(crate) struct CharacterMotion {
-    pub radius_sclale: f32,
+#[derive(Default, Clone)]
+pub(crate) struct CharacterAnimFrame {
+    pub radius_scale: f32,
     pub weapon_direction: f32,
 }
 
@@ -285,17 +327,23 @@ where
     K: Hash + Eq + Copy,
 {
     pub fn play(&mut self, animation_id: K) {
-        self.playing_id = Some(animation_id);
-        self.current_frame = 0;
+        if self.animations.contains_key(&animation_id) {
+            self.playing_id = Some(animation_id);
+            self.current_frame = 0;
+        }
     }
-    pub fn stop(&mut self) {
-        self.playing_id = None;
+    pub fn is_end(&self) -> bool {
+        if let Some(id) = self.playing_id {
+            let anim = self.animations.get(&id).unwrap();
+            return !anim.looped && self.current_frame == anim.values.len();
+        }
+        return false;
     }
     pub fn update(&mut self) {
         if let Some(id) = self.playing_id {
             if let Some(anim) = self.animations.get(&id) {
                 self.current_frame += 1;
-                if anim.looped {
+                if anim.values.len() <= self.current_frame && anim.looped {
                     self.current_frame = 0;
                 }
             }
@@ -315,4 +363,46 @@ where
 pub(crate) struct Animation<T> {
     looped: bool,
     values: Vec<T>,
+}
+
+impl<T> Animation<T> {
+    pub fn new(looped: bool, values: Vec<T>) -> Self {
+        Self { looped, values }
+    }
+}
+
+pub(crate) struct ValueObserver<V, C> {
+    prev_changed: bool,
+    changed: bool,
+    value: V,
+    check_fn: fn(&C) -> V,
+}
+
+impl<V, C> ValueObserver<V, C>
+where
+    V: PartialEq + Copy,
+{
+    pub fn new(value: V, check_fn: fn(&C) -> V) -> Self {
+        Self {
+            prev_changed: false,
+            changed: false,
+            value: value,
+            check_fn: check_fn,
+        }
+    }
+    pub fn set(&mut self, component: &C) {
+        self.prev_changed = self.changed;
+        self.changed = false;
+        self.value = (self.check_fn)(component);
+    }
+    pub fn check(&mut self, component: &C) -> bool {
+        self.changed = (self.check_fn)(component) != self.value;
+        self.changed
+    }
+    pub fn value(&self) -> V {
+        self.value
+    }
+    pub fn is_changed(&self) -> bool {
+        self.prev_changed
+    }
 }
