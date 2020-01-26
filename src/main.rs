@@ -18,19 +18,7 @@ impl Default for CharacterAnimID {
     }
 }
 
-// #[derive(Clone, Copy, PartialEq)]
-// pub(crate) enum CharacterStateID {
-//     Wait,
-//     Attack,
-// }
-// impl Default for CharacterStateID {
-//     fn default() -> Self {
-//         CharacterStateID::Wait
-//     }
-// }
-
 type CharacterAnimator = Animator<CharacterAnimID, CharacterAnimFrame>;
-// type CharacterState = ObjectState<CharacterStateID>;
 type CharacterStateObserver = ValueObserver<CharacterState, CharacterState>;
 type CharacterAnimEndObserver = ValueObserver<bool, CharacterAnimator>;
 

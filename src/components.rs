@@ -240,36 +240,6 @@ impl Team {
     }
 }
 
-// #[derive(Default)]
-// pub(crate) struct ObjectState<T> {
-//     changed: bool,
-//     state: T,
-// }
-
-// impl<T> ObjectState<T>
-// where
-//     T: PartialEq + Copy,
-// {
-//     pub fn new(state: T) -> Self {
-//         Self {
-//             changed: true,
-//             state: state,
-//         }
-//     }
-//     pub fn set(&mut self, state: T) {
-//         self.changed = self.state != state;
-//         self.state = state;
-//     }
-//     pub fn state(&self) -> T {
-//         self.state
-//     }
-//     pub fn check_changed(&mut self) -> bool {
-//         let changed = self.changed;
-//         self.changed = false;
-//         changed
-//     }
-// }
-
 #[derive(PartialEq, Clone, Copy)]
 pub(crate) enum CharacterState {
     Wait,
