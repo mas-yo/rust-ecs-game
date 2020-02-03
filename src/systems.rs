@@ -54,31 +54,6 @@ where
     }
 }
 
-impl SystemProcess
-    for System<
-        CContainer<CharacterState>,
-        (&CContainer<Input>, &CContainer<CharacterAnimEndObserver>),
-    >
-{
-    fn process(states: &mut Self::Update, (inputs, anim_observers): &Self::Refer) {
-        states
-            .iter_mut()
-            .zip_entity2(inputs, anim_observers)
-            .for_each(|(state, input, anim_observer)| match state {
-                CharacterState::Wait => {
-                    if input.attack {
-                        *state = CharacterState::Attack;
-                    }
-                }
-                CharacterState::Attack => {
-                    if anim_observer.is_changed() {
-                        *state = CharacterState::Wait;
-                    }
-                }
-            });
-    }
-}
-
 impl SystemProcess for System<CContainer<Velocity>, CContainer<Input>> {
     fn process(velocities: &mut Self::Update, inputs: &Self::Refer) {
         velocities
@@ -158,33 +133,20 @@ impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
     }
 }
 
-impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<CharacterStateObserver>> {
-    fn process(animators: &mut Self::Update, state_observers: &Self::Refer) {
-        animators
-            .iter_mut()
-            .zip_entity(state_observers)
-            .for_each(|(anim, state_observer)| {
-                if state_observer.is_changed() {
-                    match state_observer.value() {
-                        CharacterState::Wait => {
-                            anim.play(CharacterAnimID::Wait);
-                        }
-                        CharacterState::Attack => {
-                            log::info!("attack");
-                            anim.play(CharacterAnimID::Attack);
-                        }
-                    }
-                }
-            });
-    }
-}
-
-impl<K, V> SystemProcess for System<CContainer<Animator<K, V>>, ()>
-where
-    K: Hash + Eq + Copy,
+impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<Input>>
 {
-    fn process(animators: &mut Self::Update, _: &Self::Refer) {
-        animators.iter_mut().for_each(|(_, a)| a.update());
+    fn process(animators: &mut Self::Update, inputs: &Self::Refer) {
+        animators.iter_mut().zip_entity(inputs).for_each(|(a, i)| {
+            if let Some(id) = a.playing_id() {
+                if id == CharacterAnimID::Attack && a.is_end() {
+                    a.play(CharacterAnimID::Wait);
+                }
+            }
+            if i.attack {
+                a.play(CharacterAnimID::Attack);
+            }
+            a.update()
+        });
     }
 }
 

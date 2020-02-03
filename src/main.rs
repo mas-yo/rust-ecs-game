@@ -19,17 +19,12 @@ impl Default for CharacterAnimID {
 }
 
 type CharacterAnimator = Animator<CharacterAnimID, CharacterAnimFrame>;
-type CharacterStateObserver = ValueObserver<CharacterState, CharacterState>;
-type CharacterAnimEndObserver = ValueObserver<bool, CharacterAnimator>;
 
 #[derive(Default)]
 struct Game {
     next_entity_id: EntityID,
-    character_state_observer: CContainer<CharacterStateObserver>,
-    character_anim_end_observer: CContainer<CharacterAnimEndObserver>,
     inputs: CContainer<Input>,
     teams: CContainer<Team>,
-    character_states: CContainer<CharacterState>,
     move_targets: CContainer<MoveTarget>,
     positions: CContainer<Position>,
     velocities: CContainer<Velocity>,
@@ -43,9 +38,12 @@ impl Game {
 
         for d in 0..20 {
             let s = ((d as f32 / 20f32 * PI).sin() * 0.2f32 - 0.1f32) + 1.0f32;
-            frames.push(CharacterAnimFrame{radius_scale:s, weapon_direction:0f32});
+            frames.push(CharacterAnimFrame {
+                radius_scale: s,
+                weapon_direction: 0f32,
+            });
         }
-        
+
         Animation::new(true, frames)
     }
 
@@ -53,97 +51,17 @@ impl Game {
         let mut frames = Vec::new();
 
         for f in 0..12 {
-            let dir = -FRAC_PI_4 - FRAC_PI_8 + f as f32 * FRAC_PI_8/2f32;
-            frames.push(CharacterAnimFrame{radius_scale:1f32, weapon_direction:dir});
+            let dir = -FRAC_PI_4 - FRAC_PI_8 + f as f32 * FRAC_PI_8 / 2f32;
+            frames.push(CharacterAnimFrame {
+                radius_scale: 1f32,
+                weapon_direction: dir,
+            });
         }
-        
-        // vec![
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: -FRAC_PI_4,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: -FRAC_PI_4,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: -FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: -FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: 0f32,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: 0f32,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: FRAC_PI_4,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: FRAC_PI_4,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: FRAC_PI_4 + FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: FRAC_PI_4 + FRAC_PI_8,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: 0f32,
-        //     },
-        //     CharacterAnimFrame {
-        //         radius_scale: 1f32,
-        //         weapon_direction: 0f32,
-        //     },
-        // ];
         Animation::new(false, frames)
     }
 
     fn create_hero(&mut self) {
         let entity_id = self.next_entity_id;
-
-        fn exact<T>(value: &T) -> T
-        where
-            T: Copy,
-        {
-            *value
-        }
-        self.character_state_observer.push(
-            entity_id,
-            CharacterStateObserver::new(CharacterState::default(), exact::<CharacterState>),
-        );
-
-        self.character_anim_end_observer.push(
-            entity_id,
-            CharacterAnimEndObserver::new(false, CharacterAnimator::is_end),
-        );
 
         self.inputs.push(entity_id, Input::default());
         self.teams.push(entity_id, Team::new(0));
@@ -155,9 +73,6 @@ impl Game {
             },
         );
         self.velocities.push(entity_id, Velocity::default());
-
-        self.character_states
-            .push(entity_id, CharacterState::default());
 
         let mut animator = CharacterAnimator::default();
         animator.register(CharacterAnimID::Wait, Self::wait_animation());
@@ -213,41 +128,17 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
-        System::process(
-            &mut self.character_state_observer,
-            &(&self.character_states, ForObserverSet()),
-        );
-        System::process(
-            &mut self.character_anim_end_observer,
-            &(&self.character_animators, ForObserverSet()),
-        );
 
-        System::process(
-            &mut self.character_states,
-            &(&self.inputs, &self.character_anim_end_observer),
-        );
         System::process(&mut self.move_targets, &(&self.teams, &self.positions));
         System::process(&mut self.velocities, &self.inputs);
         System::process(&mut self.velocities, &(&self.positions, &self.move_targets));
         System::process(&mut self.positions, &self.velocities);
-        System::process(
-            &mut self.character_animators,
-            &self.character_state_observer,
-        );
-        System::process(&mut self.character_animators, &());
+
+        System::process(&mut self.character_animators, &self.inputs);
         System::process(&mut self.character_views, &self.character_animators);
         System::process(
             &mut self.character_views,
             &(&self.positions, &self.velocities),
-        );
-
-        System::process(
-            &mut self.character_state_observer,
-            &(&self.character_states, ForObserverCheck()),
-        );
-        System::process(
-            &mut self.character_anim_end_observer,
-            &(&self.character_animators, ForObserverCheck()),
         );
 
         Ok(())

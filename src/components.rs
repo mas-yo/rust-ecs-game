@@ -240,17 +240,6 @@ impl Team {
     }
 }
 
-#[derive(PartialEq, Clone, Copy)]
-pub(crate) enum CharacterState {
-    Wait,
-    Attack,
-}
-impl Default for CharacterState {
-    fn default() -> Self {
-        CharacterState::Wait
-    }
-}
-
 #[derive(Default)]
 pub(crate) struct Input {
     pub left: bool,
@@ -326,6 +315,9 @@ where
         let id = self.playing_id?;
         let anim = self.animations.get(&id)?;
         anim.values.get(self.current_frame)
+    }
+    pub fn playing_id(&self) -> Option<K> {
+        self.playing_id
     }
 }
 
