@@ -39,93 +39,90 @@ struct Game {
 
 impl Game {
     fn wait_animation() -> Animation<CharacterAnimFrame> {
-        let mut frames = vec![
-            CharacterAnimFrame {
-                radius_scale: 1.0f32,
-                weapon_direction: 0f32,
-            };
-            58
-        ];
+        let mut frames = Vec::new();
 
-        frames.push(CharacterAnimFrame {
-            radius_scale: 1.1f32,
-            ..Default::default()
-        });
-        frames.push(CharacterAnimFrame {
-            radius_scale: 1.1f32,
-            ..Default::default()
-        });
-
+        for d in 0..20 {
+            let s = ((d as f32 / 20f32 * PI).sin() * 0.2f32 - 0.1f32) + 1.0f32;
+            frames.push(CharacterAnimFrame{radius_scale:s, weapon_direction:0f32});
+        }
+        
         Animation::new(true, frames)
     }
 
     fn attack_animation() -> Animation<CharacterAnimFrame> {
-        let mut frames = vec![
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: -FRAC_PI_4,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: -FRAC_PI_4,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: -FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: -FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: 0f32,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: 0f32,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: FRAC_PI_4,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: FRAC_PI_4,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: FRAC_PI_4 + FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: FRAC_PI_4 + FRAC_PI_8,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: 0f32,
-            },
-            CharacterAnimFrame {
-                radius_scale: 1f32,
-                weapon_direction: 0f32,
-            },
-        ];
+        let mut frames = Vec::new();
+
+        for f in 0..12 {
+            let dir = -FRAC_PI_4 - FRAC_PI_8 + f as f32 * FRAC_PI_8/2f32;
+            frames.push(CharacterAnimFrame{radius_scale:1f32, weapon_direction:dir});
+        }
+        
+        // vec![
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: -FRAC_PI_4 - FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: -FRAC_PI_4,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: -FRAC_PI_4,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: -FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: -FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: 0f32,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: 0f32,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: FRAC_PI_4,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: FRAC_PI_4,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: FRAC_PI_4 + FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: FRAC_PI_4 + FRAC_PI_8,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: 0f32,
+        //     },
+        //     CharacterAnimFrame {
+        //         radius_scale: 1f32,
+        //         weapon_direction: 0f32,
+        //     },
+        // ];
         Animation::new(false, frames)
     }
 
