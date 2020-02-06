@@ -133,6 +133,20 @@ impl<'a, T> ComponentIterMut<'a, T> {
             other2: other2,
         }
     }
+
+    pub fn zip_entity3<U,V,W> (
+        self,
+        other1: &'a CContainer<U>,
+        other2: &'a CContainer<V>,
+        other3: &'a CContainer<W>,
+    ) -> ZipEntity3Mut<'a, T, U, V, W> {
+        ZipEntity3Mut {
+            base: self,
+            other1: other1,
+            other2: other2,
+            other3: other3,
+        }
+    }
 }
 
 pub(crate) struct ZipEntity<'a, T, U>
@@ -226,6 +240,34 @@ impl<'a, T, U, V> Iterator for ZipEntity2Mut<'a, T, U, V> {
     }
 }
 
+pub(crate) struct ZipEntity3Mut<'a, T, U, V, W>
+where
+    T: 'a,
+    U: 'a,
+    V: 'a,
+    W: 'a,
+{
+    base: ComponentIterMut<'a, T>,
+    other1: &'a CContainer<U>,
+    other2: &'a CContainer<V>,
+    other3: &'a CContainer<W>,
+}
+
+impl<'a, T, U, V, W> Iterator for ZipEntity3Mut<'a, T, U, V, W> {
+    type Item = (&'a mut T, &'a U, &'a V, &'a W);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((entity_id, base)) = self.base.next() {
+            let other1_item = self.other1.get(entity_id);
+            let other2_item = self.other2.get(entity_id);
+            let other3_item = self.other3.get(entity_id);
+            if other1_item.is_some() && other2_item.is_some() && other3_item.is_some() {
+                return Some((base, other1_item.unwrap(), other2_item.unwrap(), other3_item.unwrap()));
+            }
+        }
+        None
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct Team {
     team_id: u32,
@@ -255,6 +297,8 @@ pub(crate) type Velocity = Vector;
 
 pub(crate) type Position = Vector;
 
+pub(crate) type Direction = f32;
+
 #[derive(Default)]
 pub(crate) struct CharacterView {
     pub position: Vector,
@@ -269,6 +313,7 @@ pub(crate) struct CharacterView {
 pub(crate) struct CharacterAnimFrame {
     pub radius_scale: f32,
     pub weapon_direction: f32,
+    pub move_forward: f32,
 }
 
 #[derive(Default)]
@@ -331,6 +376,11 @@ impl<T> Animation<T> {
     pub fn new(looped: bool, values: Vec<T>) -> Self {
         Self { looped, values }
     }
+}
+
+pub(crate) struct WeaponCollider {
+    pub position: Vector,
+    pub radius: f32,
 }
 
 pub(crate) struct ValueObserver<V, C> {

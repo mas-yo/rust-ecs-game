@@ -79,8 +79,7 @@ impl SystemProcess for System<CContainer<Velocity>, CContainer<Input>> {
 }
 
 impl SystemProcess for System<CContainer<MoveTarget>, (&CContainer<Team>, &CContainer<Position>)> {
-    fn process(move_targets: &mut Self::Update, team_pos: &Self::Refer) {
-        let (teams, positions) = team_pos;
+    fn process(move_targets: &mut Self::Update, (teams, positions): &Self::Refer) {
         move_targets
             .iter_mut()
             .zip_entity2(teams, positions)
@@ -121,6 +120,29 @@ impl SystemProcess
     }
 }
 
+impl SystemProcess for System<CContainer<Direction>, (&CContainer<Position>, &CContainer<MoveTarget>)> {
+    fn process(directions: &mut Self::Update, (positions, targets): &Self::Refer) {
+        directions.iter_mut().zip_entity2(positions, targets).for_each(|(dir, position, target)|{
+            if position != target {
+                *dir = (target.y - position.y).atan2(target.x - position.x);
+            }
+        });
+    }
+}
+
+impl SystemProcess for System <CContainer<Velocity>, (&CContainer<CharacterView>, &CContainer<CharacterAnimator>)> {
+    fn process(velocities: &mut Self::Update, (views, animators): &Self::Refer) {
+        velocities.iter_mut().zip_entity2(views, animators).for_each(|(velocity,view, animator)|{
+            if let Some(val) = animator.value() {
+                if val.move_forward != 0f32 {
+                    velocity.x = view.direction.cos() * val.move_forward;
+                    velocity.y = view.direction.sin() * val.move_forward;
+                }
+            }
+        });
+    }
+}
+
 impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
     fn process(positions: &mut Self::Update, velocities: &Self::Refer) {
         positions
@@ -133,6 +155,39 @@ impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
     }
 }
 
+impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
+    fn process(directions: &mut Self::Update, inputs: &Self::Refer) {
+        directions.iter_mut().zip_entity(inputs).for_each(|(direction, input)|{
+                if input.left {
+                    *direction = PI;
+                    if input.up {
+                        *direction = FRAC_PI_4 * 5f32;
+                    }
+                    if input.down {
+                        *direction = FRAC_PI_4 * 3f32;
+                    }
+                }
+                else if input.right {
+                    *direction = 0f32;
+                    if input.up {
+                        *direction = FRAC_PI_4 * 7f32;
+                    }
+                    if input.down {
+                        *direction = FRAC_PI_4;
+                    }
+                }
+                else {
+                    if input.up {
+                        *direction = FRAC_PI_2 * 3f32;
+                    }
+                    if input.down {
+                        *direction = FRAC_PI_2;
+                    }
+                }
+        });
+    }
+}
+
 impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<Input>>
 {
     fn process(animators: &mut Self::Update, inputs: &Self::Refer) {
@@ -141,9 +196,12 @@ impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<Input>>
                 if id == CharacterAnimID::Attack && a.is_end() {
                     a.play(CharacterAnimID::Wait);
                 }
-            }
-            if i.attack {
-                a.play(CharacterAnimID::Attack);
+                if id == CharacterAnimID::Damaged && a.is_end() {
+                    a.play(CharacterAnimID::Wait);
+                }
+                if i.attack && id != CharacterAnimID::Damaged {
+                    a.play(CharacterAnimID::Damaged);
+                }
             }
             a.update()
         });
@@ -165,18 +223,16 @@ impl SystemProcess for System<CContainer<CharacterView>, CContainer<CharacterAni
 }
 
 impl SystemProcess
-    for System<CContainer<CharacterView>, (&CContainer<Position>, &CContainer<Velocity>)>
+    for System<CContainer<CharacterView>, (&CContainer<Position>, &CContainer<Direction>)>
 {
-    fn process(views: &mut Self::Update, pos_vel: &Self::Refer) {
+    fn process(views: &mut Self::Update, (positions, directions): &Self::Refer) {
         views
             .iter_mut()
-            .zip_entity2(pos_vel.0, pos_vel.1)
-            .for_each(|(view, pos, vel)| {
+            .zip_entity2(positions, directions)
+            .for_each(|(view, pos, dir)| {
                 view.position.x = pos.x;
                 view.position.y = pos.y;
-                if vel.x != 0f32 || vel.y != 0f32 {
-                    view.direction = vel.y.atan2(vel.x);
-                }
+                view.direction = *dir;
             });
     }
 }

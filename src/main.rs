@@ -10,6 +10,7 @@ use systems::*;
 pub(crate) enum CharacterAnimID {
     Wait,
     Attack,
+    Damaged,
 }
 
 impl Default for CharacterAnimID {
@@ -27,6 +28,7 @@ struct Game {
     teams: CContainer<Team>,
     move_targets: CContainer<MoveTarget>,
     positions: CContainer<Position>,
+    directions: CContainer<Direction>,
     velocities: CContainer<Velocity>,
     character_animators: CContainer<CharacterAnimator>,
     character_views: CContainer<CharacterView>,
@@ -41,6 +43,7 @@ impl Game {
             frames.push(CharacterAnimFrame {
                 radius_scale: s,
                 weapon_direction: 0f32,
+                ..Default::default()
             });
         }
 
@@ -55,8 +58,23 @@ impl Game {
             frames.push(CharacterAnimFrame {
                 radius_scale: 1f32,
                 weapon_direction: dir,
+                ..Default::default()
             });
         }
+        Animation::new(false, frames)
+    }
+
+    fn damaged_animation() -> Animation<CharacterAnimFrame> {
+        let mut frames = Vec::new();
+
+        for _ in 0..12 {
+            frames.push(CharacterAnimFrame{
+                radius_scale: 1f32,
+                move_forward: -8f32,
+                ..Default::default()
+            });
+        }
+
         Animation::new(false, frames)
     }
 
@@ -72,11 +90,13 @@ impl Game {
                 y: 150f32,
             },
         );
+        self.directions.push(entity_id, Direction::default());
         self.velocities.push(entity_id, Velocity::default());
 
         let mut animator = CharacterAnimator::default();
         animator.register(CharacterAnimID::Wait, Self::wait_animation());
         animator.register(CharacterAnimID::Attack, Self::attack_animation());
+        animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
         animator.play(CharacterAnimID::Wait);
         self.character_animators.push(entity_id, animator);
 
@@ -100,7 +120,16 @@ impl Game {
         self.teams.push(entity_id, Team::new(1));
         self.positions
             .push(entity_id, Position { x: 10f32, y: 10f32 });
+        self.directions.push(entity_id, Direction::default());
         self.velocities.push(entity_id, Velocity::default());
+
+        let mut animator = CharacterAnimator::default();
+        animator.register(CharacterAnimID::Wait, Self::wait_animation());
+        animator.register(CharacterAnimID::Attack, Self::attack_animation());
+        animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
+        animator.play(CharacterAnimID::Wait);
+        self.character_animators.push(entity_id, animator);
+
         self.character_views.push(
             entity_id,
             CharacterView {
@@ -128,17 +157,19 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
-
         System::process(&mut self.move_targets, &(&self.teams, &self.positions));
         System::process(&mut self.velocities, &self.inputs);
         System::process(&mut self.velocities, &(&self.positions, &self.move_targets));
-        System::process(&mut self.positions, &self.velocities);
+        System::process(&mut self.velocities, &(&self.character_views, &self.character_animators));
 
+        System::process(&mut self.positions, &self.velocities);
+        System::process(&mut self.directions, &self.inputs);
+        System::process(&mut self.directions, &(&self.positions, &self.move_targets));
         System::process(&mut self.character_animators, &self.inputs);
         System::process(&mut self.character_views, &self.character_animators);
         System::process(
             &mut self.character_views,
-            &(&self.positions, &self.velocities),
+            &(&self.positions, &self.directions),
         );
 
         Ok(())
