@@ -68,7 +68,7 @@ impl Game {
         let mut frames = Vec::new();
 
         for _ in 0..12 {
-            frames.push(CharacterAnimFrame{
+            frames.push(CharacterAnimFrame {
                 radius_scale: 1f32,
                 move_forward: -8f32,
                 ..Default::default()
@@ -160,7 +160,10 @@ impl State for Game {
         System::process(&mut self.move_targets, &(&self.teams, &self.positions));
         System::process(&mut self.velocities, &self.inputs);
         System::process(&mut self.velocities, &(&self.positions, &self.move_targets));
-        System::process(&mut self.velocities, &(&self.character_views, &self.character_animators));
+        System::process(
+            &mut self.velocities,
+            &(&self.character_views, &self.character_animators),
+        );
 
         System::process(&mut self.positions, &self.velocities);
         System::process(&mut self.directions, &self.inputs);

@@ -134,7 +134,7 @@ impl<'a, T> ComponentIterMut<'a, T> {
         }
     }
 
-    pub fn zip_entity3<U,V,W> (
+    pub fn zip_entity3<U, V, W>(
         self,
         other1: &'a CContainer<U>,
         other2: &'a CContainer<V>,
@@ -261,7 +261,12 @@ impl<'a, T, U, V, W> Iterator for ZipEntity3Mut<'a, T, U, V, W> {
             let other2_item = self.other2.get(entity_id);
             let other3_item = self.other3.get(entity_id);
             if other1_item.is_some() && other2_item.is_some() && other3_item.is_some() {
-                return Some((base, other1_item.unwrap(), other2_item.unwrap(), other3_item.unwrap()));
+                return Some((
+                    base,
+                    other1_item.unwrap(),
+                    other2_item.unwrap(),
+                    other3_item.unwrap(),
+                ));
             }
         }
         None
@@ -378,10 +383,37 @@ impl<T> Animation<T> {
     }
 }
 
-pub(crate) struct WeaponCollider {
-    pub position: Vector,
-    pub radius: f32,
+pub(crate) struct WeaponHit {
+    pub hit: bool,
+    // pub opponent_entity_ids: HashSet<EntityID>,
 }
+
+pub(crate) struct SwordCollider {
+    pub line: quicksilver::geom::Line,
+}
+impl SwordCollider {
+    pub fn is_collided(&self, body: &BodyCollider) -> bool {
+        body.circle.overlaps(&self.line) // || body.circle.includes(&self.line)
+    }
+}
+
+pub(crate) struct BodyWeaponCollider {
+    pub circle: quicksilver::geom::Circle,
+}
+
+impl BodyWeaponCollider {
+    pub fn is_collided(&self, body: &BodyCollider) -> bool {
+        body.circle.overlaps(&self.circle)
+    }
+}
+
+pub(crate) struct BodyCollider {
+    pub circle: quicksilver::geom::Circle,
+}
+
+// pub(crate) struct Collider<S> {
+//     pub shapes: Vec<S>,
+// }
 
 pub(crate) struct ValueObserver<V, C> {
     prev_changed: bool,

@@ -120,26 +120,36 @@ impl SystemProcess
     }
 }
 
-impl SystemProcess for System<CContainer<Direction>, (&CContainer<Position>, &CContainer<MoveTarget>)> {
+impl SystemProcess
+    for System<CContainer<Direction>, (&CContainer<Position>, &CContainer<MoveTarget>)>
+{
     fn process(directions: &mut Self::Update, (positions, targets): &Self::Refer) {
-        directions.iter_mut().zip_entity2(positions, targets).for_each(|(dir, position, target)|{
-            if position != target {
-                *dir = (target.y - position.y).atan2(target.x - position.x);
-            }
-        });
+        directions
+            .iter_mut()
+            .zip_entity2(positions, targets)
+            .for_each(|(dir, position, target)| {
+                if position != target {
+                    *dir = (target.y - position.y).atan2(target.x - position.x);
+                }
+            });
     }
 }
 
-impl SystemProcess for System <CContainer<Velocity>, (&CContainer<CharacterView>, &CContainer<CharacterAnimator>)> {
+impl SystemProcess
+    for System<CContainer<Velocity>, (&CContainer<CharacterView>, &CContainer<CharacterAnimator>)>
+{
     fn process(velocities: &mut Self::Update, (views, animators): &Self::Refer) {
-        velocities.iter_mut().zip_entity2(views, animators).for_each(|(velocity,view, animator)|{
-            if let Some(val) = animator.value() {
-                if val.move_forward != 0f32 {
-                    velocity.x = view.direction.cos() * val.move_forward;
-                    velocity.y = view.direction.sin() * val.move_forward;
+        velocities
+            .iter_mut()
+            .zip_entity2(views, animators)
+            .for_each(|(velocity, view, animator)| {
+                if let Some(val) = animator.value() {
+                    if val.move_forward != 0f32 {
+                        velocity.x = view.direction.cos() * val.move_forward;
+                        velocity.y = view.direction.sin() * val.move_forward;
+                    }
                 }
-            }
-        });
+            });
     }
 }
 
@@ -157,7 +167,10 @@ impl SystemProcess for System<CContainer<Position>, CContainer<Velocity>> {
 
 impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
     fn process(directions: &mut Self::Update, inputs: &Self::Refer) {
-        directions.iter_mut().zip_entity(inputs).for_each(|(direction, input)|{
+        directions
+            .iter_mut()
+            .zip_entity(inputs)
+            .for_each(|(direction, input)| {
                 if input.left {
                     *direction = PI;
                     if input.up {
@@ -166,8 +179,7 @@ impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
                     if input.down {
                         *direction = FRAC_PI_4 * 3f32;
                     }
-                }
-                else if input.right {
+                } else if input.right {
                     *direction = 0f32;
                     if input.up {
                         *direction = FRAC_PI_4 * 7f32;
@@ -175,8 +187,7 @@ impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
                     if input.down {
                         *direction = FRAC_PI_4;
                     }
-                }
-                else {
+                } else {
                     if input.up {
                         *direction = FRAC_PI_2 * 3f32;
                     }
@@ -184,12 +195,120 @@ impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
                         *direction = FRAC_PI_2;
                     }
                 }
-        });
+            });
     }
 }
 
-impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<Input>>
+// pub(crate) struct ForBodyCollider();
+
+// impl<I> SystemProcess
+//     for System<
+//         CContainer<Collider<I, quicksilver::geom::Circle>>,
+//         (&CContainer<Position>, ForBodyCollider),
+//     >
+// {
+//     fn process(colliders: &mut Self::Update, (positions, _): &Self::Refer) {
+//         colliders
+//             .iter_mut()
+//             .zip_entity(positions)
+//             .for_each(|(collider, position)| {
+//                 collider.shape.pos = *position;
+//             });
+//     }
+// }
+
+// pub(crate) trait IsCollided {
+//     fn is_collided(&self, other: &Self) -> bool;
+// }
+
+// impl<S> SystemProcess for System<CContainer<Collision<I>>, CContainer<Collider<S>>>
+// where
+//     S: IsCollided,
+// {
+//     fn process(collisions: &mut Self::Update, colliders: &Self::Refer) {
+//         collisions.iter_mut().for_each(|(entity_id, collision)| {
+//             if let Some(collider) = colliders.get(entity_id) {
+//                 collision.collided_ids.clear();
+//                 colliders
+//                     .iter()
+//                     .for_each(|(other_entity_id, other_collider)| {
+//                         if entity_id == other_entity_id {
+//                             return;
+//                         }
+//                         if collider.shape.is_collided(&other_collider.shape) {
+//                             collision.collided_ids.push(other_collider.collider_id);
+//                         }
+//                     });
+//             }
+//         });
+//     }
+// }
+
+impl SystemProcess
+    for System<
+        CContainer<WeaponHit>,
+        (
+            &CContainer<SwordCollider>,
+            &CContainer<BodyCollider>,
+            &CContainer<Team>,
+        ),
+    >
 {
+    fn process(
+        weapon_hits: &mut Self::Update,
+        (sword_colliders, body_colliders, teams): &Self::Refer,
+    ) {
+        weapon_hits
+            .iter_mut()
+            .zip_entity2(body_colliders, teams)
+            .for_each(|(hit, self_body, self_team)| {
+                sword_colliders
+                    .iter()
+                    .zip_entity(teams)
+                    .for_each(|(other_sword, other_team)| {
+                        if self_team.team_id() != other_team.team_id() {
+                            if other_sword.is_collided(self_body) {
+                                hit.hit = true;
+                            }
+                        }
+                    });
+            });
+    }
+}
+
+impl SystemProcess
+    for System<
+        CContainer<WeaponHit>,
+        (
+            &CContainer<BodyWeaponCollider>,
+            &CContainer<BodyCollider>,
+            &CContainer<Team>,
+        ),
+    >
+{
+    fn process(
+        weapon_hits: &mut Self::Update,
+        (body_weapons, body_colliders, teams): &Self::Refer,
+    ) {
+        weapon_hits
+            .iter_mut()
+            .zip_entity2(body_colliders, teams)
+            .for_each(|(hit, self_body, self_team)| {
+                body_weapons
+                    .iter()
+                    .zip_entity(teams)
+                    .for_each(|(other_weapon, other_team)| {
+                        if self_team.team_id() != other_team.team_id() {
+                            if other_weapon.is_collided(&self_body) {
+                                hit.hit = true;
+                            }
+                        }
+                    });
+            });
+    }
+}
+
+impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<Input>> {
     fn process(animators: &mut Self::Update, inputs: &Self::Refer) {
         animators.iter_mut().zip_entity(inputs).for_each(|(a, i)| {
             if let Some(id) = a.playing_id() {
