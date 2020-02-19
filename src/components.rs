@@ -383,11 +383,13 @@ impl<T> Animation<T> {
     }
 }
 
+#[derive(Default)]
 pub(crate) struct WeaponHit {
     pub hit: bool,
     // pub opponent_entity_ids: HashSet<EntityID>,
 }
 
+#[derive(Default)]
 pub(crate) struct SwordCollider {
     pub line: quicksilver::geom::Line,
 }
@@ -397,6 +399,7 @@ impl SwordCollider {
     }
 }
 
+#[derive(Default)]
 pub(crate) struct BodyWeaponCollider {
     pub circle: quicksilver::geom::Circle,
 }
@@ -407,6 +410,7 @@ impl BodyWeaponCollider {
     }
 }
 
+#[derive(Default)]
 pub(crate) struct BodyCollider {
     pub circle: quicksilver::geom::Circle,
 }

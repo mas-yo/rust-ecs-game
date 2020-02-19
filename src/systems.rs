@@ -244,6 +244,44 @@ impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
 //     }
 // }
 
+impl SystemProcess for System<CContainer<SwordCollider>, CContainer<CharacterView>> {
+    fn process(sword_colliders: &mut Self::Update, views: &Self::Refer) {
+        sword_colliders
+            .iter_mut()
+            .zip_entity(views)
+            .for_each(|(collider, view)| {
+                let dir = view.direction + view.weapon_direction;
+                collider.line.a = view.position;
+                collider.line.b.x = view.position.x + dir.cos() * view.radius * 1.8f32;
+                collider.line.b.y = view.position.y + dir.sin() * view.radius * 1.8f32;
+            });
+    }
+}
+
+impl SystemProcess for System<CContainer<BodyWeaponCollider>, CContainer<CharacterView>> {
+    fn process(body_weapon_colliders: &mut Self::Update, views: &Self::Refer) {
+        body_weapon_colliders
+            .iter_mut()
+            .zip_entity(views)
+            .for_each(|(collider, view)| {
+                collider.circle.pos = view.position;
+                collider.circle.radius = view.radius;
+            });
+    }
+}
+
+impl SystemProcess for System<CContainer<BodyCollider>, CContainer<CharacterView>> {
+    fn process(body_weapon_colliders: &mut Self::Update, views: &Self::Refer) {
+        body_weapon_colliders
+            .iter_mut()
+            .zip_entity(views)
+            .for_each(|(collider, view)| {
+                collider.circle.pos = view.position;
+                collider.circle.radius = view.radius;
+            });
+    }
+}
+
 impl SystemProcess
     for System<
         CContainer<WeaponHit>,
@@ -267,9 +305,7 @@ impl SystemProcess
                     .zip_entity(teams)
                     .for_each(|(other_sword, other_team)| {
                         if self_team.team_id() != other_team.team_id() {
-                            if other_sword.is_collided(self_body) {
-                                hit.hit = true;
-                            }
+                            hit.hit = other_sword.is_collided(self_body);
                         }
                     });
             });
@@ -299,31 +335,40 @@ impl SystemProcess
                     .zip_entity(teams)
                     .for_each(|(other_weapon, other_team)| {
                         if self_team.team_id() != other_team.team_id() {
-                            if other_weapon.is_collided(&self_body) {
-                                hit.hit = true;
-                            }
-                        }
+                            hit.hit = other_weapon.is_collided(&self_body);
+                         }
                     });
             });
     }
 }
 
-impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<Input>> {
-    fn process(animators: &mut Self::Update, inputs: &Self::Refer) {
-        animators.iter_mut().zip_entity(inputs).for_each(|(a, i)| {
-            if let Some(id) = a.playing_id() {
-                if id == CharacterAnimID::Attack && a.is_end() {
-                    a.play(CharacterAnimID::Wait);
+impl SystemProcess
+    for System<CContainer<CharacterAnimator>, (&CContainer<Input>, &CContainer<WeaponHit>)>
+{
+    fn process(animators: &mut Self::Update, (inputs, weapon_hits): &Self::Refer) {
+        animators
+            .iter_mut()
+            .zip_entity2(inputs, weapon_hits)
+            .for_each(|(animator, input, hit)| {
+                if let Some(id) = animator.playing_id() {
+                    if id == CharacterAnimID::Attack && animator.is_end() {
+                        animator.play(CharacterAnimID::Wait);
+                    }
+                    if id == CharacterAnimID::Attack && animator.is_end() {
+                        animator.play(CharacterAnimID::Wait);
+                    }
+                    if id == CharacterAnimID::Damaged && animator.is_end() {
+                        animator.play(CharacterAnimID::Wait);
+                    }
+                    if input.attack && id != CharacterAnimID::Attack {
+                        animator.play(CharacterAnimID::Attack);
+                    }
+                    if hit.hit && id != CharacterAnimID::Damaged {
+                        animator.play(CharacterAnimID::Damaged);
+                    }
                 }
-                if id == CharacterAnimID::Damaged && a.is_end() {
-                    a.play(CharacterAnimID::Wait);
-                }
-                if i.attack && id != CharacterAnimID::Damaged {
-                    a.play(CharacterAnimID::Damaged);
-                }
-            }
-            a.update()
-        });
+                animator.update()
+            });
     }
 }
 
