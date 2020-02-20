@@ -391,11 +391,17 @@ pub(crate) struct WeaponHit {
 
 #[derive(Default)]
 pub(crate) struct SwordCollider {
+    pub active: bool,
     pub line: quicksilver::geom::Line,
 }
 impl SwordCollider {
     pub fn is_collided(&self, body: &BodyCollider) -> bool {
-        body.circle.overlaps(&self.line) // || body.circle.includes(&self.line)
+        if self.active == false {
+            false
+        }
+        else {
+            body.circle.overlaps(&self.line) // || body.circle.includes(&self.line)
+        }
     }
 }
 

@@ -244,16 +244,23 @@ impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
 //     }
 // }
 
-impl SystemProcess for System<CContainer<SwordCollider>, CContainer<CharacterView>> {
-    fn process(sword_colliders: &mut Self::Update, views: &Self::Refer) {
+impl SystemProcess for System<CContainer<SwordCollider>, (&CContainer<CharacterView>,&CContainer<CharacterAnimator>)> {
+    fn process(sword_colliders: &mut Self::Update, (views, animators): &Self::Refer) {
         sword_colliders
             .iter_mut()
-            .zip_entity(views)
-            .for_each(|(collider, view)| {
+            .zip_entity2(views, animators)
+            .for_each(|(collider, view, animator)| {
                 let dir = view.direction + view.weapon_direction;
                 collider.line.a = view.position;
                 collider.line.b.x = view.position.x + dir.cos() * view.radius * 1.8f32;
                 collider.line.b.y = view.position.y + dir.sin() * view.radius * 1.8f32;
+
+                collider.active = false;
+                if let Some(id) = animator.playing_id() {
+                    if id == CharacterAnimID::Attack {
+                        collider.active = true;
+                    }
+                } 
             });
     }
 }
@@ -282,6 +289,12 @@ impl SystemProcess for System<CContainer<BodyCollider>, CContainer<CharacterView
     }
 }
 
+impl SystemProcess for System<CContainer<WeaponHit>, ()>{
+    fn process(weapon_hits: &mut Self::Update, _: &Self::Refer){
+        weapon_hits.iter_mut().for_each(|(_,hit)|{hit.hit = false;});
+    }
+}
+
 impl SystemProcess
     for System<
         CContainer<WeaponHit>,
@@ -300,7 +313,6 @@ impl SystemProcess
             .iter_mut()
             .zip_entity2(body_colliders, teams)
             .for_each(|(hit, self_body, self_team)| {
-                hit.hit = false;
                 sword_colliders
                     .iter()
                     .zip_entity(teams)
@@ -331,7 +343,6 @@ impl SystemProcess
             .iter_mut()
             .zip_entity2(body_colliders, teams)
             .for_each(|(hit, self_body, self_team)| {
-                hit.hit = false;
                 body_weapons
                     .iter()
                     .zip_entity(teams)
