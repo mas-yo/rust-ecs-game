@@ -200,10 +200,9 @@ impl State for Game {
         System::process(&mut self.positions, &self.velocities);
         System::process(&mut self.directions, &self.inputs);
         System::process(&mut self.directions, &(&self.positions, &self.move_targets));
-        System::process(
-            &mut self.character_animators,
-            &(&self.inputs, &self.weapon_hits),
-        );
+        System::process(&mut self.character_animators, &self.inputs);
+        System::process(&mut self.character_animators, &self.weapon_hits);
+        System::process(&mut self.character_animators, &());
         System::process(&mut self.character_views, &self.character_animators);
         System::process(
             &mut self.character_views,

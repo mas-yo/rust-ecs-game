@@ -300,6 +300,7 @@ impl SystemProcess
             .iter_mut()
             .zip_entity2(body_colliders, teams)
             .for_each(|(hit, self_body, self_team)| {
+                hit.hit = false;
                 sword_colliders
                     .iter()
                     .zip_entity(teams)
@@ -330,44 +331,59 @@ impl SystemProcess
             .iter_mut()
             .zip_entity2(body_colliders, teams)
             .for_each(|(hit, self_body, self_team)| {
+                hit.hit = false;
                 body_weapons
                     .iter()
                     .zip_entity(teams)
                     .for_each(|(other_weapon, other_team)| {
                         if self_team.team_id() != other_team.team_id() {
                             hit.hit = other_weapon.is_collided(&self_body);
-                         }
+                        }
                     });
             });
     }
 }
 
-impl SystemProcess
-    for System<CContainer<CharacterAnimator>, (&CContainer<Input>, &CContainer<WeaponHit>)>
-{
-    fn process(animators: &mut Self::Update, (inputs, weapon_hits): &Self::Refer) {
+impl SystemProcess for System<CContainer<CharacterAnimator>, ()> {
+    fn process(animators: &mut Self::Update, _: &Self::Refer) {
         animators
             .iter_mut()
-            .zip_entity2(inputs, weapon_hits)
-            .for_each(|(animator, input, hit)| {
+            .for_each(|(_, animator)| animator.update());
+    }
+}
+
+impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<Input>> {
+    fn process(animators: &mut Self::Update, inputs: &Self::Refer) {
+        animators
+            .iter_mut()
+            .zip_entity(inputs)
+            .for_each(|(animator, input)| {
                 if let Some(id) = animator.playing_id() {
                     if id == CharacterAnimID::Attack && animator.is_end() {
-                        animator.play(CharacterAnimID::Wait);
-                    }
-                    if id == CharacterAnimID::Attack && animator.is_end() {
-                        animator.play(CharacterAnimID::Wait);
-                    }
-                    if id == CharacterAnimID::Damaged && animator.is_end() {
                         animator.play(CharacterAnimID::Wait);
                     }
                     if input.attack && id != CharacterAnimID::Attack {
                         animator.play(CharacterAnimID::Attack);
                     }
+                }
+            });
+    }
+}
+
+impl SystemProcess for System<CContainer<CharacterAnimator>, CContainer<WeaponHit>> {
+    fn process(animators: &mut Self::Update, weapon_hits: &Self::Refer) {
+        animators
+            .iter_mut()
+            .zip_entity(weapon_hits)
+            .for_each(|(animator, hit)| {
+                if let Some(id) = animator.playing_id() {
+                    if id == CharacterAnimID::Damaged && animator.is_end() {
+                        animator.play(CharacterAnimID::Wait);
+                    }
                     if hit.hit && id != CharacterAnimID::Damaged {
                         animator.play(CharacterAnimID::Damaged);
                     }
                 }
-                animator.update()
             });
     }
 }
@@ -404,8 +420,6 @@ impl SystemProcess
 impl SystemProcess for System<Window, CContainer<CharacterView>> {
     fn process(window: &mut Self::Update, views: &Self::Refer) {
         views.iter().for_each(|(_, view)| {
-            // log::info!("r {}", view.radius_scale);
-
             window.draw(
                 &Circle::new(
                     (view.position.x, view.position.y),
