@@ -173,12 +173,13 @@ impl State for Game {
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
         System::process(&mut self.body_colliders, &self.character_views);
-        System::process(&mut self.sword_colliders, &(&self.character_views, &self.character_animators));
+        System::process(
+            &mut self.sword_colliders,
+            &(&self.character_views, &self.character_animators),
+        );
         System::process(&mut self.body_weapon_colliders, &self.character_views);
 
-        System::process(
-            &mut self.weapon_hits,&()
-        );
+        System::process(&mut self.weapon_hits, &());
         System::process(
             &mut self.weapon_hits,
             &(&self.sword_colliders, &self.body_colliders, &self.teams),

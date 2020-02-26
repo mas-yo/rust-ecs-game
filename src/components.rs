@@ -386,7 +386,6 @@ impl<T> Animation<T> {
 #[derive(Default)]
 pub(crate) struct WeaponHit {
     pub hit: bool,
-    // pub opponent_entity_ids: HashSet<EntityID>,
 }
 
 #[derive(Default)]
@@ -398,9 +397,8 @@ impl SwordCollider {
     pub fn is_collided(&self, body: &BodyCollider) -> bool {
         if self.active == false {
             false
-        }
-        else {
-            body.circle.overlaps(&self.line) // || body.circle.includes(&self.line)
+        } else {
+            body.circle.overlaps(&self.line)
         }
     }
 }
@@ -420,10 +418,6 @@ impl BodyWeaponCollider {
 pub(crate) struct BodyCollider {
     pub circle: quicksilver::geom::Circle,
 }
-
-// pub(crate) struct Collider<S> {
-//     pub shapes: Vec<S>,
-// }
 
 pub(crate) struct ValueObserver<V, C> {
     prev_changed: bool,

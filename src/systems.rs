@@ -199,52 +199,12 @@ impl SystemProcess for System<CContainer<Direction>, CContainer<Input>> {
     }
 }
 
-// pub(crate) struct ForBodyCollider();
-
-// impl<I> SystemProcess
-//     for System<
-//         CContainer<Collider<I, quicksilver::geom::Circle>>,
-//         (&CContainer<Position>, ForBodyCollider),
-//     >
-// {
-//     fn process(colliders: &mut Self::Update, (positions, _): &Self::Refer) {
-//         colliders
-//             .iter_mut()
-//             .zip_entity(positions)
-//             .for_each(|(collider, position)| {
-//                 collider.shape.pos = *position;
-//             });
-//     }
-// }
-
-// pub(crate) trait IsCollided {
-//     fn is_collided(&self, other: &Self) -> bool;
-// }
-
-// impl<S> SystemProcess for System<CContainer<Collision<I>>, CContainer<Collider<S>>>
-// where
-//     S: IsCollided,
-// {
-//     fn process(collisions: &mut Self::Update, colliders: &Self::Refer) {
-//         collisions.iter_mut().for_each(|(entity_id, collision)| {
-//             if let Some(collider) = colliders.get(entity_id) {
-//                 collision.collided_ids.clear();
-//                 colliders
-//                     .iter()
-//                     .for_each(|(other_entity_id, other_collider)| {
-//                         if entity_id == other_entity_id {
-//                             return;
-//                         }
-//                         if collider.shape.is_collided(&other_collider.shape) {
-//                             collision.collided_ids.push(other_collider.collider_id);
-//                         }
-//                     });
-//             }
-//         });
-//     }
-// }
-
-impl SystemProcess for System<CContainer<SwordCollider>, (&CContainer<CharacterView>,&CContainer<CharacterAnimator>)> {
+impl SystemProcess
+    for System<
+        CContainer<SwordCollider>,
+        (&CContainer<CharacterView>, &CContainer<CharacterAnimator>),
+    >
+{
     fn process(sword_colliders: &mut Self::Update, (views, animators): &Self::Refer) {
         sword_colliders
             .iter_mut()
@@ -260,7 +220,7 @@ impl SystemProcess for System<CContainer<SwordCollider>, (&CContainer<CharacterV
                     if id == CharacterAnimID::Attack {
                         collider.active = true;
                     }
-                } 
+                }
             });
     }
 }
@@ -289,9 +249,11 @@ impl SystemProcess for System<CContainer<BodyCollider>, CContainer<CharacterView
     }
 }
 
-impl SystemProcess for System<CContainer<WeaponHit>, ()>{
-    fn process(weapon_hits: &mut Self::Update, _: &Self::Refer){
-        weapon_hits.iter_mut().for_each(|(_,hit)|{hit.hit = false;});
+impl SystemProcess for System<CContainer<WeaponHit>, ()> {
+    fn process(weapon_hits: &mut Self::Update, _: &Self::Refer) {
+        weapon_hits.iter_mut().for_each(|(_, hit)| {
+            hit.hit = false;
+        });
     }
 }
 
