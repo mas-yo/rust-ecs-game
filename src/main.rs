@@ -28,8 +28,7 @@ struct Game {
     teams: CContainer<Team>,
     sword_colliders: CContainer<SwordCollider>,
     body_weapon_colliders: CContainer<BodyWeaponCollider>,
-    body_colliders: CContainer<BodyCollider>,
-    weapon_hits: CContainer<WeaponHit>,
+    body_defense_colliders: CContainer<BodyDefenseCollider>,
     move_targets: CContainer<MoveTarget>,
     positions: CContainer<Position>,
     directions: CContainer<Direction>,
@@ -94,8 +93,8 @@ impl Game {
                 y: 150f32,
             },
         );
-        self.weapon_hits.push(entity_id, WeaponHit::default());
-        self.body_colliders.push(entity_id, BodyCollider::default());
+        self.body_defense_colliders
+            .push(entity_id, BodyDefenseCollider::default());
         self.sword_colliders
             .push(entity_id, SwordCollider::default());
 
@@ -128,8 +127,8 @@ impl Game {
         self.move_targets.push(entity_id, MoveTarget::default());
         self.teams.push(entity_id, Team::new(1));
 
-        self.weapon_hits.push(entity_id, WeaponHit::default());
-        self.body_colliders.push(entity_id, BodyCollider::default());
+        self.body_defense_colliders
+            .push(entity_id, BodyDefenseCollider::default());
         self.body_weapon_colliders
             .push(entity_id, BodyWeaponCollider::default());
 
@@ -172,23 +171,17 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
-        System::process(&mut self.body_colliders, &self.character_views);
         System::process(
             &mut self.sword_colliders,
             &(&self.character_views, &self.character_animators),
         );
         System::process(&mut self.body_weapon_colliders, &self.character_views);
-
-        System::process(&mut self.weapon_hits, &());
         System::process(
-            &mut self.weapon_hits,
-            &(&self.sword_colliders, &self.body_colliders, &self.teams),
-        );
-        System::process(
-            &mut self.weapon_hits,
+            &mut self.body_defense_colliders,
             &(
+                &self.character_views,
+                &self.sword_colliders,
                 &self.body_weapon_colliders,
-                &self.body_colliders,
                 &self.teams,
             ),
         );
@@ -205,7 +198,7 @@ impl State for Game {
         System::process(&mut self.directions, &self.inputs);
         System::process(&mut self.directions, &(&self.positions, &self.move_targets));
         System::process(&mut self.character_animators, &self.inputs);
-        System::process(&mut self.character_animators, &self.weapon_hits);
+        System::process(&mut self.character_animators, &self.body_defense_colliders);
         System::process(&mut self.character_animators, &());
         System::process(&mut self.character_views, &self.character_animators);
         System::process(

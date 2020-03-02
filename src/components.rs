@@ -159,11 +159,11 @@ where
 }
 
 impl<'a, T, U> Iterator for ZipEntity<'a, T, U> {
-    type Item = (&'a T, &'a U);
+    type Item = (EntityID, &'a T, &'a U);
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((entity_id, base)) = self.base.next() {
             if let Some(other_item) = self.other.get(entity_id) {
-                return Some((base, other_item));
+                return Some((entity_id, base, other_item));
             }
         }
         None
@@ -180,11 +180,11 @@ where
 }
 
 impl<'a, T, U> Iterator for ZipEntityMut<'a, T, U> {
-    type Item = (&'a mut T, &'a U);
+    type Item = (EntityID, &'a mut T, &'a U);
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((entity_id, base)) = self.base.next() {
             if let Some(other_item) = self.other.get(entity_id) {
-                return Some((base, other_item));
+                return Some((entity_id, base, other_item));
             }
         }
         None
@@ -202,13 +202,13 @@ where
 }
 
 impl<'a, T, U, V> Iterator for ZipEntity2<'a, T, U, V> {
-    type Item = (&'a T, &'a U, &'a V);
+    type Item = (EntityID, &'a T, &'a U, &'a V);
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((entity_id, base)) = self.base.next() {
             let other1_item = self.other1.get(entity_id);
             let other2_item = self.other2.get(entity_id);
             if other1_item.is_some() && other2_item.is_some() {
-                return Some((base, other1_item.unwrap(), other2_item.unwrap()));
+                return Some((entity_id, base, other1_item.unwrap(), other2_item.unwrap()));
             }
         }
         None
@@ -227,13 +227,13 @@ where
 }
 
 impl<'a, T, U, V> Iterator for ZipEntity2Mut<'a, T, U, V> {
-    type Item = (&'a mut T, &'a U, &'a V);
+    type Item = (EntityID, &'a mut T, &'a U, &'a V);
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((entity_id, base)) = self.base.next() {
             let other1_item = self.other1.get(entity_id);
             let other2_item = self.other2.get(entity_id);
             if other1_item.is_some() && other2_item.is_some() {
-                return Some((base, other1_item.unwrap(), other2_item.unwrap()));
+                return Some((entity_id, base, other1_item.unwrap(), other2_item.unwrap()));
             }
         }
         None
@@ -383,10 +383,10 @@ impl<T> Animation<T> {
     }
 }
 
-#[derive(Default)]
-pub(crate) struct WeaponHit {
-    pub hit: bool,
-}
+// #[derive(Default)]
+// pub(crate) struct WeaponHit {
+//     pub hit: bool,
+// }
 
 #[derive(Default)]
 pub(crate) struct SwordCollider {
@@ -394,7 +394,7 @@ pub(crate) struct SwordCollider {
     pub line: quicksilver::geom::Line,
 }
 impl SwordCollider {
-    pub fn is_collided(&self, body: &BodyCollider) -> bool {
+    pub fn is_collided(&self, body: &BodyDefenseCollider) -> bool {
         if self.active == false {
             false
         } else {
@@ -409,13 +409,14 @@ pub(crate) struct BodyWeaponCollider {
 }
 
 impl BodyWeaponCollider {
-    pub fn is_collided(&self, body: &BodyCollider) -> bool {
+    pub fn is_collided(&self, body: &BodyDefenseCollider) -> bool {
         body.circle.overlaps(&self.circle)
     }
 }
 
 #[derive(Default)]
-pub(crate) struct BodyCollider {
+pub(crate) struct BodyDefenseCollider {
+    pub hit: bool,
     pub circle: quicksilver::geom::Circle,
 }
 
