@@ -121,7 +121,7 @@ impl Game {
         self.next_entity_id = self.next_entity_id + 1;
     }
 
-    fn create_enemy(&mut self) {
+    fn create_enemy(&mut self, x: f32, y: f32) {
         let entity_id = self.next_entity_id;
 
         self.move_targets.push(entity_id, MoveTarget::default());
@@ -133,7 +133,7 @@ impl Game {
             .push(entity_id, BodyWeaponCollider::default());
 
         self.positions
-            .push(entity_id, Position { x: 10f32, y: 10f32 });
+            .push(entity_id, Position { x: x, y: y });
         self.directions.push(entity_id, Direction::default());
         self.velocities.push(entity_id, Velocity::default());
 
@@ -162,7 +162,8 @@ impl State for Game {
     fn new() -> Result<Game> {
         let mut game = Self::default();
         game.create_hero();
-        game.create_enemy();
+        game.create_enemy(20f32, 20f32);
+        game.create_enemy(100f32, 20f32);
         Ok(game)
     }
 
