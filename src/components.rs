@@ -1,7 +1,6 @@
 use quicksilver::prelude::*;
 use std::collections::*;
 use std::hash::Hash;
-use std::marker::PhantomData;
 
 pub(crate) type EntityID = u32;
 

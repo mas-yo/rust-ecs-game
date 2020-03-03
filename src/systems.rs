@@ -1,8 +1,5 @@
 use crate::components::*;
 use crate::*;
-use quicksilver::prelude::*;
-use std::f32::consts::*;
-use std::hash::Hash;
 use std::marker::PhantomData;
 
 pub(crate) trait SystemInterface {
@@ -237,18 +234,6 @@ impl SystemProcess for System<CContainer<BodyWeaponCollider>, CContainer<Charact
     }
 }
 
-// impl SystemProcess for System<CContainer<BodyCollider>, CContainer<CharacterView>> {
-//     fn process(body_weapon_colliders: &mut Self::Update, views: &Self::Refer) {
-//         body_weapon_colliders
-//             .iter_mut()
-//             .zip_entity(views)
-//             .for_each(|(collider, view)| {
-//                 collider.circle.pos = view.position;
-//                 collider.circle.radius = view.radius;
-//             });
-//     }
-// }
-
 impl SystemProcess
     for System<
         CContainer<BodyDefenseCollider>,
@@ -300,74 +285,6 @@ impl SystemProcess
             });
     }
 }
-
-// impl SystemProcess for System<CContainer<WeaponHit>, ()> {
-//     fn process(weapon_hits: &mut Self::Update, _: &Self::Refer) {
-//         weapon_hits.iter_mut().for_each(|(_, hit)| {
-//             hit.hit = false;
-//         });
-//     }
-// }
-
-// impl SystemProcess
-//     for System<
-//         CContainer<WeaponHit>,
-//         (
-//             &CContainer<SwordCollider>,
-//             &CContainer<BodyCollider>,
-//             &CContainer<Team>,
-//         ),
-//     >
-// {
-//     fn process(
-//         weapon_hits: &mut Self::Update,
-//         (sword_colliders, body_colliders, teams): &Self::Refer,
-//     ) {
-//         weapon_hits
-//             .iter_mut()
-//             .zip_entity2(body_colliders, teams)
-//             .for_each(|(hit, self_body, self_team)| {
-//                 sword_colliders
-//                     .iter()
-//                     .zip_entity(teams)
-//                     .for_each(|(other_sword, other_team)| {
-//                         if self_team.team_id() != other_team.team_id() {
-//                             hit.hit = other_sword.is_collided(self_body);
-//                         }
-//                     });
-//             });
-//     }
-// }
-
-// impl SystemProcess
-//     for System<
-//         CContainer<WeaponHit>,
-//         (
-//             &CContainer<BodyWeaponCollider>,
-//             &CContainer<BodyCollider>,
-//             &CContainer<Team>,
-//         ),
-//     >
-// {
-//     fn process(
-//         weapon_hits: &mut Self::Update,
-//         (body_weapons, body_colliders, teams): &Self::Refer,
-//     ) {
-//         weapon_hits
-//             .iter_mut()
-//             .zip_entity2(body_colliders, teams)
-//             .for_each(|(hit, self_body, self_team)| {
-//                 body_weapons
-//                     .iter()
-//                     .zip_entity(teams)
-//                     .for_each(|(other_weapon, other_team)| {
-//                         if self_team.team_id() != other_team.team_id() {
-//                             hit.hit = other_weapon.is_collided(&self_body);
-//                         }
-//                     });
-//             });
-//     }
-// }
 
 impl SystemProcess for System<CContainer<CharacterAnimator>, ()> {
     fn process(animators: &mut Self::Update, _: &Self::Refer) {
