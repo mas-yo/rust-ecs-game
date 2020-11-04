@@ -1,6 +1,7 @@
 use crate::components::*;
 use crate::*;
 use std::marker::PhantomData;
+use std::ops::Add;
 
 pub(crate) trait SystemInterface {
     type Update;
@@ -271,17 +272,32 @@ impl SystemProcess
                     },
                 );
 
-                body_weapon_colliders.iter().zip_entity(teams).for_each(|(weapon_entity_id, weapon_collider, weapon_team)|{
-                    if defense_entity_id == weapon_entity_id {
-                        return;
-                    }
-                    if defense_team.team_id() == weapon_team.team_id() {
-                        return;
-                    }
-                    if weapon_collider.is_collided(body_defense) {
-                        body_defense.hit = true;
-                    }
-                });
+                body_weapon_colliders.iter().zip_entity(teams).for_each(
+                    |(weapon_entity_id, weapon_collider, weapon_team)| {
+                        if defense_entity_id == weapon_entity_id {
+                            return;
+                        }
+                        if defense_team.team_id() == weapon_team.team_id() {
+                            return;
+                        }
+                        if weapon_collider.is_collided(body_defense) {
+                            body_defense.hit = true;
+                        }
+                    },
+                );
+            });
+    }
+}
+
+impl SystemProcess for System<CContainer<Health>, CContainer<BodyDefenseCollider>> {
+    fn process(healths: &mut Self::Update, bodies: &Self::Refer) {
+        healths
+            .iter_mut()
+            .zip_entity(bodies)
+            .for_each(|(_, health, body)| {
+                if body.hit {
+                    health.current_health -= 10;
+                }
             });
     }
 }
@@ -356,6 +372,65 @@ impl SystemProcess
                 view.position.y = pos.y;
                 view.direction = *dir;
             });
+    }
+}
+
+impl SystemProcess
+    for System<CContainer<StatusBarView<StatusBarType::Health>>, CContainer<Health>>
+{
+    fn process(status_bars: &mut Self::Update, healths: &Self::Refer) {
+        status_bars
+            .iter_mut()
+            .zip_entity(healths)
+            .for_each(|(_, bar, health)| {
+                bar.current_length = (bar.frame_length as f32 * health.ratio()) as i32;
+            });
+    }
+}
+
+impl SystemProcess
+    for System<CContainer<StatusBarView<StatusBarType::Health>>, CContainer<CharacterView>>
+{
+    fn process(status_bars: &mut Self::Update, character_views: &Self::Refer) {
+        status_bars
+            .iter_mut()
+            .zip_entity(character_views)
+            .for_each(|(_, bar, chara)| {
+                bar.position = chara.position + Vector::new(10f32, -10f32);
+                if bar.animated_length != bar.current_length {
+                    let diff = bar.current_length - bar.animated_length;
+                    let mov = diff / diff.abs();
+                    bar.animated_length += mov;
+                }
+            })
+    }
+}
+
+impl SystemProcess for System<Window, CContainer<StatusBarView<StatusBarType::Health>>> {
+    fn process(window: &mut Self::Update, views: &Self::Refer) {
+        views.iter().for_each(|(_, view)| {
+            window.draw(
+                &Rectangle::new(
+                    (view.position.x - 1f32, view.position.y - 1f32),
+                    (view.frame_length + 1i32, 7i32),
+                ),
+                Col(Color::BLACK),
+            );
+            window.draw(
+                &Rectangle::new(
+                    (view.position.x, view.position.y),
+                    (view.animated_length, 6f32),
+                ),
+                Col(Color::RED),
+            );
+            window.draw(
+                &Rectangle::new(
+                    (view.position.x, view.position.y),
+                    (view.current_length, 6f32),
+                ),
+                Col(view.color),
+            );
+        });
     }
 }
 

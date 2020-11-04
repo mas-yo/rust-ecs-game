@@ -1,6 +1,7 @@
 use quicksilver::prelude::*;
 use std::collections::*;
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 pub(crate) type EntityID = u32;
 
@@ -313,6 +314,34 @@ pub(crate) struct CharacterView {
     pub weapon_direction: f32,
 }
 
+pub(crate) mod StatusBarType {
+    #[derive(Default)]
+    pub struct Health();
+    // Heat(()),
+}
+#[derive(Default)]
+pub(crate) struct StatusBarView<T> {
+    pub position: Vector,
+    pub color: Color,
+    pub frame_length: i32,
+    pub animated_length: i32,
+    pub current_length: i32,
+    phantom: PhantomData<T>,
+}
+
+impl<T> StatusBarView<T> {
+    pub fn new(length: i32, color: Color) -> Self {
+        Self {
+            position: Vector::new(0f32, 0f32),
+            color: color,
+            frame_length: length,
+            current_length: length,
+            animated_length: length,
+            phantom: PhantomData,
+        }
+    }
+}
+
 #[derive(Default, Clone)]
 pub(crate) struct CharacterAnimFrame {
     pub radius_scale: f32,
@@ -417,6 +446,24 @@ impl BodyWeaponCollider {
 pub(crate) struct BodyDefenseCollider {
     pub hit: bool,
     pub circle: quicksilver::geom::Circle,
+}
+
+#[derive(Default)]
+pub(crate) struct Health {
+    pub max_health: i32,
+    pub current_health: i32,
+}
+
+impl Health {
+    pub fn new(health: i32) -> Self {
+        Self {
+            max_health: health,
+            current_health: health,
+        }
+    }
+    pub fn ratio(&self) -> f32 {
+        self.current_health as f32 / self.max_health as f32
+    }
 }
 
 pub(crate) struct ValueObserver<V, C> {

@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate log;
 use quicksilver::prelude::*;
 use std::f32::consts::*;
 mod components;
@@ -26,6 +28,7 @@ struct Game {
     next_entity_id: EntityID,
     inputs: CContainer<Input>,
     teams: CContainer<Team>,
+    healths: CContainer<Health>,
     sword_colliders: CContainer<SwordCollider>,
     body_weapon_colliders: CContainer<BodyWeaponCollider>,
     body_defense_colliders: CContainer<BodyDefenseCollider>,
@@ -34,6 +37,7 @@ struct Game {
     directions: CContainer<Direction>,
     velocities: CContainer<Velocity>,
     character_animators: CContainer<CharacterAnimator>,
+    health_bar_views: CContainer<StatusBarView<StatusBarType::Health>>,
     character_views: CContainer<CharacterView>,
 }
 
@@ -86,6 +90,7 @@ impl Game {
 
         self.inputs.push(entity_id, Input::default());
         self.teams.push(entity_id, Team::new(0));
+        self.healths.push(entity_id, Health::new(100));
         self.positions.push(
             entity_id,
             Position {
@@ -108,6 +113,11 @@ impl Game {
         animator.play(CharacterAnimID::Wait);
         self.character_animators.push(entity_id, animator);
 
+        self.health_bar_views.push(
+            entity_id,
+            StatusBarView::<StatusBarType::Health>::new(24, Color::GREEN),
+        );
+
         self.character_views.push(
             entity_id,
             CharacterView {
@@ -126,14 +136,14 @@ impl Game {
 
         self.move_targets.push(entity_id, MoveTarget::default());
         self.teams.push(entity_id, Team::new(1));
+        self.healths.push(entity_id, Health::new(100));
 
         self.body_defense_colliders
             .push(entity_id, BodyDefenseCollider::default());
         self.body_weapon_colliders
             .push(entity_id, BodyWeaponCollider::default());
 
-        self.positions
-            .push(entity_id, Position { x: x, y: y });
+        self.positions.push(entity_id, Position { x: x, y: y });
         self.directions.push(entity_id, Direction::default());
         self.velocities.push(entity_id, Velocity::default());
 
@@ -143,6 +153,11 @@ impl Game {
         animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
         animator.play(CharacterAnimID::Wait);
         self.character_animators.push(entity_id, animator);
+
+        self.health_bar_views.push(
+            entity_id,
+            StatusBarView::<StatusBarType::Health>::new(100, Color::GREEN),
+        );
 
         self.character_views.push(
             entity_id,
@@ -160,6 +175,7 @@ impl Game {
 
 impl State for Game {
     fn new() -> Result<Game> {
+        info!("----- starte game -----");
         let mut game = Self::default();
         game.create_hero();
         game.create_enemy(20f32, 20f32);
@@ -186,6 +202,7 @@ impl State for Game {
                 &self.teams,
             ),
         );
+        System::process(&mut self.healths, &self.body_defense_colliders);
 
         System::process(&mut self.move_targets, &(&self.teams, &self.positions));
         System::process(&mut self.velocities, &self.inputs);
@@ -206,6 +223,8 @@ impl State for Game {
             &mut self.character_views,
             &(&self.positions, &self.directions),
         );
+        System::process(&mut self.health_bar_views, &self.healths);
+        System::process(&mut self.health_bar_views, &self.character_views);
 
         Ok(())
     }
@@ -259,6 +278,7 @@ impl State for Game {
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
         System::process(window, &self.character_views);
+        System::process(window, &self.health_bar_views);
         Ok(())
     }
 }
