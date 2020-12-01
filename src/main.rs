@@ -1,12 +1,18 @@
 #[macro_use]
 extern crate log;
+
+#[macro_use]
+extern crate static_ecs;
+use static_ecs::*;
+
 use quicksilver::prelude::*;
+use static_ecs::component::*;
 use std::f32::consts::*;
+
 mod components;
 mod systems;
 
 use components::*;
-use systems::*;
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub(crate) enum CharacterAnimID {
@@ -23,22 +29,27 @@ impl Default for CharacterAnimID {
 
 type CharacterAnimator = Animator<CharacterAnimID, CharacterAnimFrame>;
 
-#[derive(Default)]
+world! {
+    World {
+        Input,
+        Team,
+        Health,
+        SwordCollider,
+        BodyWeaponCollider,
+        BodyDefenseCollider,
+        MoveTarget,
+        Position,
+        Direction,
+        Velocity,
+        CharacterAnimator,
+        StatusBarView<StatusBarType::Health>,
+        CharacterView,
+    }
+}
+
+// #[derive(Default)]
 struct Game {
-    next_entity_id: EntityID,
-    inputs: CContainer<Input>,
-    teams: CContainer<Team>,
-    healths: CContainer<Health>,
-    sword_colliders: CContainer<SwordCollider>,
-    body_weapon_colliders: CContainer<BodyWeaponCollider>,
-    body_defense_colliders: CContainer<BodyDefenseCollider>,
-    move_targets: CContainer<MoveTarget>,
-    positions: CContainer<Position>,
-    directions: CContainer<Direction>,
-    velocities: CContainer<Velocity>,
-    character_animators: CContainer<CharacterAnimator>,
-    health_bar_views: CContainer<StatusBarView<StatusBarType::Health>>,
-    character_views: CContainer<CharacterView>,
+    world: World,
 }
 
 impl Game {
@@ -85,41 +96,27 @@ impl Game {
         Animation::new(false, frames)
     }
 
-    fn create_hero(&mut self) {
-        let entity_id = self.next_entity_id;
-
-        self.inputs.push(entity_id, Input::default());
-        self.teams.push(entity_id, Team::new(0));
-        self.healths.push(entity_id, Health::new(100));
-        self.positions.push(
-            entity_id,
-            Position {
-                x: 150f32,
-                y: 150f32,
-            },
-        );
-        self.body_defense_colliders
-            .push(entity_id, BodyDefenseCollider::default());
-        self.sword_colliders
-            .push(entity_id, SwordCollider::default());
-
-        self.directions.push(entity_id, Direction::default());
-        self.velocities.push(entity_id, Velocity::default());
+    fn create_hero(world: &mut World) {
+        // let entity_id = self.next_entity_id;
 
         let mut animator = CharacterAnimator::default();
         animator.register(CharacterAnimID::Wait, Self::wait_animation());
         animator.register(CharacterAnimID::Attack, Self::attack_animation());
         animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
         animator.play(CharacterAnimID::Wait);
-        self.character_animators.push(entity_id, animator);
 
-        self.health_bar_views.push(
-            entity_id,
+        add_entity!(
+            world;
+            Input::default(),
+            Team::new(0),
+            Health::new(100),
+            Position(Vector{x:150f32, y:150f32}),
+            BodyDefenseCollider::default(),
+            SwordCollider::default(),
+            Direction::default(),
+            Velocity::default(),
+            animator,
             StatusBarView::<StatusBarType::Health>::new(24, Color::GREEN),
-        );
-
-        self.character_views.push(
-            entity_id,
             CharacterView {
                 color: Color::GREEN,
                 radius: 10f32,
@@ -128,39 +125,68 @@ impl Game {
             },
         );
 
-        self.next_entity_id = self.next_entity_id + 1;
+        // self.inputs.push(entity_id, Input::default());
+        // self.teams.push(entity_id, Team::new(0));
+        // self.healths.push(entity_id, Health::new(100));
+        // self.positions.push(
+        //     entity_id,
+        //     Position {
+        //         x: 150f32,
+        //         y: 150f32,
+        //     },
+        // );
+        // self.body_defense_colliders
+        //     .push(entity_id, BodyDefenseCollider::default());
+        // self.sword_colliders
+        //     .push(entity_id, SwordCollider::default());
+
+        // self.directions.push(entity_id, Direction::default());
+        // self.velocities.push(entity_id, Velocity::default());
+
+        // let mut animator = CharacterAnimator::default();
+        // animator.register(CharacterAnimID::Wait, Self::wait_animation());
+        // animator.register(CharacterAnimID::Attack, Self::attack_animation());
+        // animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
+        // animator.play(CharacterAnimID::Wait);
+        // self.character_animators.push(entity_id, animator);
+
+        // self.health_bar_views.push(
+        //     entity_id,
+        //     StatusBarView::<StatusBarType::Health>::new(24, Color::GREEN),
+        // );
+
+        // self.character_views.push(
+        //     entity_id,
+        //     CharacterView {
+        //         color: Color::GREEN,
+        //         radius: 10f32,
+        //         radius_scale: 1f32,
+        //         ..Default::default()
+        //     },
+        // );
+
+        // self.next_entity_id = self.next_entity_id + 1;
     }
 
-    fn create_enemy(&mut self, x: f32, y: f32) {
-        let entity_id = self.next_entity_id;
-
-        self.move_targets.push(entity_id, MoveTarget::default());
-        self.teams.push(entity_id, Team::new(1));
-        self.healths.push(entity_id, Health::new(100));
-
-        self.body_defense_colliders
-            .push(entity_id, BodyDefenseCollider::default());
-        self.body_weapon_colliders
-            .push(entity_id, BodyWeaponCollider::default());
-
-        self.positions.push(entity_id, Position { x: x, y: y });
-        self.directions.push(entity_id, Direction::default());
-        self.velocities.push(entity_id, Velocity::default());
-
+    fn create_enemy(world: &mut World, x: f32, y: f32) {
         let mut animator = CharacterAnimator::default();
         animator.register(CharacterAnimID::Wait, Self::wait_animation());
         animator.register(CharacterAnimID::Attack, Self::attack_animation());
         animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
         animator.play(CharacterAnimID::Wait);
-        self.character_animators.push(entity_id, animator);
 
-        self.health_bar_views.push(
-            entity_id,
-            StatusBarView::<StatusBarType::Health>::new(100, Color::GREEN),
-        );
-
-        self.character_views.push(
-            entity_id,
+        add_entity!(
+            world;
+            MoveTarget::default(),
+            Team::new(1),
+            Health::new(100),
+            Position(Vector{x:x, y:y}),
+            BodyDefenseCollider::default(),
+            BodyWeaponCollider::default(),
+            Direction::default(),
+            Velocity::default(),
+            animator,
+            StatusBarView::<StatusBarType::Health>::new(24, Color::GREEN),
             CharacterView {
                 color: Color::RED,
                 radius: 15f32,
@@ -169,18 +195,55 @@ impl Game {
             },
         );
 
-        self.next_entity_id = self.next_entity_id + 1;
+        // let entity_id = self.next_entity_id;
+
+        // self.move_targets.push(entity_id, MoveTarget::default());
+        // self.teams.push(entity_id, Team::new(1));
+        // self.healths.push(entity_id, Health::new(100));
+
+        // self.body_defense_colliders
+        //     .push(entity_id, BodyDefenseCollider::default());
+        // self.body_weapon_colliders
+        //     .push(entity_id, BodyWeaponCollider::default());
+
+        // self.positions.push(entity_id, Position { x: x, y: y });
+        // self.directions.push(entity_id, Direction::default());
+        // self.velocities.push(entity_id, Velocity::default());
+
+        // let mut animator = CharacterAnimator::default();
+        // animator.register(CharacterAnimID::Wait, Self::wait_animation());
+        // animator.register(CharacterAnimID::Attack, Self::attack_animation());
+        // animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
+        // animator.play(CharacterAnimID::Wait);
+        // self.character_animators.push(entity_id, animator);
+
+        // self.health_bar_views.push(
+        //     entity_id,
+        //     StatusBarView::<StatusBarType::Health>::new(100, Color::GREEN),
+        // );
+
+        // self.character_views.push(
+        //     entity_id,
+        //     CharacterView {
+        //         color: Color::RED,
+        //         radius: 15f32,
+        //         radius_scale: 1f32,
+        //         ..Default::default()
+        //     },
+        // );
+
+        // self.next_entity_id = self.next_entity_id + 1;
     }
 }
 
 impl State for Game {
     fn new() -> Result<Game> {
         info!("----- starte game -----");
-        let mut game = Self::default();
-        game.create_hero();
-        game.create_enemy(20f32, 20f32);
-        game.create_enemy(100f32, 20f32);
-        Ok(game)
+        let mut world = World::default();
+        Game::create_hero(&mut world);
+        Game::create_enemy(&mut world, 20f32, 20f32);
+        Game::create_enemy(&mut world, 100f32, 20f32);
+        Ok(Game { world })
     }
 
     /// Will happen at a fixed rate of 60 ticks per second under ideal conditions. Under non-ideal conditions,
@@ -188,43 +251,288 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
-        System::process(
-            &mut self.sword_colliders,
-            &(&self.character_views, &self.character_animators),
-        );
-        System::process(&mut self.body_weapon_colliders, &self.character_views);
-        System::process(
-            &mut self.body_defense_colliders,
-            &(
-                &self.character_views,
-                &self.sword_colliders,
-                &self.body_weapon_colliders,
-                &self.teams,
-            ),
-        );
-        System::process(&mut self.healths, &self.body_defense_colliders);
+        system!(
+            self.world,
+            |_entity_id,
+             collider: &SwordCollider,
+             view: &CharacterView,
+             animator: &CharacterAnimator| {
+                let mut col = collider.clone();
+                let dir = view.direction + view.weapon_direction;
+                col.line.a = view.position;
+                col.line.b.x = view.position.x + dir.cos() * view.radius * 1.8f32;
+                col.line.b.y = view.position.y + dir.sin() * view.radius * 1.8f32;
 
-        System::process(&mut self.move_targets, &(&self.teams, &self.positions));
-        System::process(&mut self.velocities, &self.inputs);
-        System::process(&mut self.velocities, &(&self.positions, &self.move_targets));
-        System::process(
-            &mut self.velocities,
-            &(&self.character_views, &self.character_animators),
+                col.active = false;
+                if let Some(id) = animator.playing_id() {
+                    if id == CharacterAnimID::Attack {
+                        col.active = true;
+                    }
+                }
+                col
+            }
         );
 
-        System::process(&mut self.positions, &self.velocities);
-        System::process(&mut self.directions, &self.inputs);
-        System::process(&mut self.directions, &(&self.positions, &self.move_targets));
-        System::process(&mut self.character_animators, &self.inputs);
-        System::process(&mut self.character_animators, &self.body_defense_colliders);
-        System::process(&mut self.character_animators, &());
-        System::process(&mut self.character_views, &self.character_animators);
-        System::process(
-            &mut self.character_views,
-            &(&self.positions, &self.directions),
+        system!(
+            self.world,
+            |_entity_id, collider: &BodyWeaponCollider, view: &CharacterView| {
+                let mut col = collider.clone();
+                col.circle.pos = view.position;
+                col.circle.radius = view.radius;
+                col
+            }
         );
-        System::process(&mut self.health_bar_views, &self.healths);
-        System::process(&mut self.health_bar_views, &self.character_views);
+
+        {
+            let sword_colliders = component!(self.world, SwordCollider);
+            let body_weapon_colliders = component!(self.world, BodyWeaponCollider);
+            let teams = component!(self.world, Team);
+
+            system!(
+                self.world,
+                |defense_entity_id,
+                 body_defense: &BodyDefenseCollider,
+                 view: &CharacterView,
+                 defense_team: &Team| {
+                    let mut new_body_defense = body_defense.clone();
+
+                    new_body_defense.hit = false;
+                    new_body_defense.circle.pos = view.position;
+                    new_body_defense.circle.radius = view.radius;
+
+                    sword_colliders.iter().zip_entity(teams).for_each(
+                        |(sword_entity_id, sword_collider, sword_team)| {
+                            if defense_entity_id == sword_entity_id {
+                                return;
+                            }
+                            if defense_team.team_id() == sword_team.team_id() {
+                                return;
+                            }
+                            if sword_collider.is_collided(body_defense) {
+                                new_body_defense.hit = true;
+                            }
+                        },
+                    );
+
+                    body_weapon_colliders.iter().zip_entity(teams).for_each(
+                        |(weapon_entity_id, weapon_collider, weapon_team)| {
+                            if defense_entity_id == weapon_entity_id {
+                                return;
+                            }
+                            if defense_team.team_id() == weapon_team.team_id() {
+                                return;
+                            }
+                            if weapon_collider.is_collided(body_defense) {
+                                new_body_defense.hit = true;
+                            }
+                        },
+                    );
+                    new_body_defense
+                }
+            );
+        }
+
+        system!(
+            self.world,
+            |_entity_id, health: &Health, collider: &BodyDefenseCollider| {
+                let mut new_health = health.clone();
+                if collider.hit {
+                    new_health.current_health -= 10;
+                }
+                new_health
+            }
+        );
+
+        {
+            let teams = component!(self.world, Team);
+            let positions = component!(self.world, Position);
+            system!(
+                self.world,
+                |_entity_id, move_target: &MoveTarget, self_team: &Team, self_pos: &Position| {
+                    let mut new_target = move_target.clone();
+                    teams
+                        .iter()
+                        .filter(|(_, team)| team.team_id() != self_team.team_id())
+                        .for_each(|(entity_id, _)| {
+                            if let Some(pos) = CContainer::<Position>::get(positions, entity_id) {
+                                let distance = pos.0.distance((self_pos.0.x, self_pos.0.y));
+                                if distance < 100f32 {
+                                    new_target.0.x = pos.0.x;
+                                    new_target.0.y = pos.0.y;
+                                } else {
+                                    new_target.0.x = self_pos.0.x;
+                                    new_target.0.y = self_pos.0.y;
+                                }
+                            }
+                        });
+
+                    new_target
+                }
+            );
+        }
+
+        system!(self.world, |_entity_id,
+                             velocity: &Velocity,
+                             input: &Input| {
+            let mut new_velocity = velocity.clone();
+            new_velocity.0.x = 0f32;
+            new_velocity.0.y = 0f32;
+            if input.left {
+                new_velocity.0.x = -2f32;
+            }
+            if input.right {
+                new_velocity.0.x = 2f32;
+            }
+            if input.up {
+                new_velocity.0.y = -2f32;
+            }
+            if input.down {
+                new_velocity.0.y = 2f32;
+            }
+            new_velocity
+        });
+
+        system!(
+            self.world,
+            |_entity_id, velocity: &Velocity, pos: &Position, target: &MoveTarget| {
+                let mut new_velocity = velocity.clone();
+                let mut tmp = Vector::default();
+                tmp.x = target.0.x - pos.0.x;
+                tmp.y = target.0.y - pos.0.y;
+                new_velocity.0.x = tmp.x / 50f32;
+                new_velocity.0.y = tmp.y / 50f32;
+                new_velocity
+            }
+        );
+
+        system!(self.world, |_entity_id, pos: &Position, vel: &Velocity| {
+            let mut new_pos = pos.clone();
+            new_pos.0.x += vel.0.x;
+            new_pos.0.y += vel.0.y;
+            new_pos
+        });
+
+        system!(self.world, |_entity_id, dir: &Direction, input: &Input| {
+            let mut new_dir = dir.clone();
+            if input.left {
+                new_dir = PI;
+                if input.up {
+                    new_dir = FRAC_PI_4 * 5f32;
+                }
+                if input.down {
+                    new_dir = FRAC_PI_4 * 3f32;
+                }
+            } else if input.right {
+                new_dir = 0f32;
+                if input.up {
+                    new_dir = FRAC_PI_4 * 7f32;
+                }
+                if input.down {
+                    new_dir = FRAC_PI_4;
+                }
+            } else {
+                if input.up {
+                    new_dir = FRAC_PI_2 * 3f32;
+                }
+                if input.down {
+                    new_dir = FRAC_PI_2;
+                }
+            }
+            new_dir
+        });
+
+        system!(
+            self.world,
+            |_entity_id, dir: &Direction, pos: &Position, target: &MoveTarget| {
+                let mut new_dir = dir.clone();
+                if pos.0 != target.0 {
+                    new_dir = (target.0.y - pos.0.y).atan2(target.0.x - pos.0.x);
+                }
+                new_dir
+            }
+        );
+
+        system!(self.world, |_entity_id,
+                             animator: &CharacterAnimator,
+                             input: &Input| {
+            let mut new_animator = animator.clone();
+            if let Some(id) = new_animator.playing_id() {
+                if id == CharacterAnimID::Attack && new_animator.is_end() {
+                    new_animator.play(CharacterAnimID::Wait);
+                }
+                if input.attack && id != CharacterAnimID::Attack {
+                    new_animator.play(CharacterAnimID::Attack);
+                }
+            }
+            new_animator
+        });
+
+        system!(
+            self.world,
+            |_entity_id, animator: &CharacterAnimator, collider: &BodyDefenseCollider| {
+                let mut new_animator = animator.clone();
+                if let Some(id) = new_animator.playing_id() {
+                    if id == CharacterAnimID::Damaged && new_animator.is_end() {
+                        new_animator.play(CharacterAnimID::Wait);
+                    }
+                    if collider.hit && id != CharacterAnimID::Damaged {
+                        new_animator.play(CharacterAnimID::Damaged);
+                    }
+                }
+                new_animator
+            }
+        );
+
+        system!(self.world, |_entity_id, animator: &CharacterAnimator| {
+            let mut new_animator = animator.clone();
+            new_animator.update();
+            new_animator
+        });
+
+        system!(
+            self.world,
+            |_entity_id, view: &CharacterView, animator: &CharacterAnimator| {
+                let mut new_view = view.clone();
+                if let Some(val) = animator.value() {
+                    new_view.radius_scale = val.radius_scale;
+                    new_view.weapon_direction = val.weapon_direction;
+                }
+                new_view
+            }
+        );
+
+        system!(self.world, |_entity_id,
+                             view: &CharacterView,
+                             pos: &Position,
+                             dir: &Direction| {
+            let mut new_view = view.clone();
+            new_view.position.x = pos.0.x;
+            new_view.position.y = pos.0.y;
+            new_view.direction = *dir;
+            new_view
+        });
+
+        system!(self.world, |_entity_id,
+                             bar: &StatusBarView<StatusBarType::Health>,
+                             health: &Health| {
+            let mut new_bar = bar.clone();
+            new_bar.current_length = (new_bar.frame_length as f32 * health.ratio()) as i32;
+            new_bar
+        });
+
+        system!(
+            self.world,
+            |_entity_id, bar: &StatusBarView<StatusBarType::Health>, view: &CharacterView| {
+                let mut new_bar = bar.clone();
+                new_bar.position = view.position + Vector::new(10f32, -10f32);
+                if new_bar.animated_length != new_bar.current_length {
+                    let diff = new_bar.current_length - new_bar.animated_length;
+                    let mov = diff / diff.abs();
+                    new_bar.animated_length += mov;
+                }
+                new_bar
+            }
+        );
 
         Ok(())
     }
@@ -232,6 +540,7 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn event(&mut self, event: &Event, _: &mut Window) -> Result<()> {
+        let inputs = component_mut!(self.world, Input);
         match event {
             Event::Key(key, state) => {
                 let mut pressed = false;
@@ -242,28 +551,28 @@ impl State for Game {
                 }
                 match key {
                     Key::A => {
-                        self.inputs.iter_mut().for_each(|(_, i)| {
+                        inputs.iter_mut().for_each(|(_, i)| {
                             i.left = pressed;
                         });
                     }
                     Key::D => {
-                        self.inputs.iter_mut().for_each(|(_, i)| {
+                        inputs.iter_mut().for_each(|(_, i)| {
                             i.right = pressed;
                         });
                     }
                     Key::W => {
-                        self.inputs.iter_mut().for_each(|(_, i)| {
+                        inputs.iter_mut().for_each(|(_, i)| {
                             i.up = pressed;
                         });
                     }
                     Key::S => {
-                        self.inputs.iter_mut().for_each(|(_, i)| {
+                        inputs.iter_mut().for_each(|(_, i)| {
                             i.down = pressed;
                         });
                     }
                     Key::Space => {
                         // log::info!("space");
-                        self.inputs.iter_mut().for_each(|(_, i)| {
+                        inputs.iter_mut().for_each(|(_, i)| {
                             i.attack = pressed;
                         });
                     }
@@ -277,8 +586,53 @@ impl State for Game {
 
     fn draw(&mut self, window: &mut Window) -> Result<()> {
         window.clear(Color::WHITE)?;
-        System::process(window, &self.character_views);
-        System::process(window, &self.health_bar_views);
+
+        component!(self.world, CharacterView)
+            .iter()
+            .for_each(|(_, view)| {
+                window.draw(
+                    &Circle::new(
+                        (view.position.x, view.position.y),
+                        view.radius * view.radius_scale,
+                    ),
+                    Col(view.color),
+                );
+                let dir = view.direction + view.weapon_direction;
+                let line_end = (
+                    view.position.x + dir.cos() * view.radius * 1.8f32,
+                    view.position.y + dir.sin() * view.radius * 1.8f32,
+                );
+                window.draw(
+                    &Line::new((view.position.x, view.position.y), line_end),
+                    Col(view.color),
+                );
+            });
+        component!(self.world, StatusBarView<StatusBarType::Health>)
+            .iter()
+            .for_each(|(_, view)| {
+                window.draw(
+                    &Rectangle::new(
+                        (view.position.x - 1f32, view.position.y - 1f32),
+                        (view.frame_length + 1i32, 7i32),
+                    ),
+                    Col(Color::BLACK),
+                );
+                window.draw(
+                    &Rectangle::new(
+                        (view.position.x, view.position.y),
+                        (view.animated_length, 6f32),
+                    ),
+                    Col(Color::RED),
+                );
+                window.draw(
+                    &Rectangle::new(
+                        (view.position.x, view.position.y),
+                        (view.current_length, 6f32),
+                    ),
+                    Col(view.color),
+                );
+            });
+        // System::process(window, &self.health_bar_views);
         Ok(())
     }
 }
