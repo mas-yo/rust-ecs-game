@@ -405,6 +405,20 @@ impl State for Game {
             }
         );
 
+        system!(
+            self.world,
+            |_entity_id, vel: &Velocity, view: &CharacterView, animator: &CharacterAnimator| {
+                let mut velocity = vel.clone();
+                if let Some(val) = animator.value() {
+                    if val.move_forward != 0f32 {
+                        velocity.0.x = view.direction.cos() * val.move_forward;
+                        velocity.0.y = view.direction.sin() * val.move_forward;
+                    }
+                }
+                velocity
+            }
+        );
+
         system!(self.world, |_entity_id, pos: &Position, vel: &Velocity| {
             let mut new_pos = pos.clone();
             new_pos.0.x += vel.0.x;
