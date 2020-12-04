@@ -124,48 +124,6 @@ impl Game {
                 ..Default::default()
             },
         );
-
-        // self.inputs.push(entity_id, Input::default());
-        // self.teams.push(entity_id, Team::new(0));
-        // self.healths.push(entity_id, Health::new(100));
-        // self.positions.push(
-        //     entity_id,
-        //     Position {
-        //         x: 150f32,
-        //         y: 150f32,
-        //     },
-        // );
-        // self.body_defense_colliders
-        //     .push(entity_id, BodyDefenseCollider::default());
-        // self.sword_colliders
-        //     .push(entity_id, SwordCollider::default());
-
-        // self.directions.push(entity_id, Direction::default());
-        // self.velocities.push(entity_id, Velocity::default());
-
-        // let mut animator = CharacterAnimator::default();
-        // animator.register(CharacterAnimID::Wait, Self::wait_animation());
-        // animator.register(CharacterAnimID::Attack, Self::attack_animation());
-        // animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
-        // animator.play(CharacterAnimID::Wait);
-        // self.character_animators.push(entity_id, animator);
-
-        // self.health_bar_views.push(
-        //     entity_id,
-        //     StatusBarView::<StatusBarType::Health>::new(24, Color::GREEN),
-        // );
-
-        // self.character_views.push(
-        //     entity_id,
-        //     CharacterView {
-        //         color: Color::GREEN,
-        //         radius: 10f32,
-        //         radius_scale: 1f32,
-        //         ..Default::default()
-        //     },
-        // );
-
-        // self.next_entity_id = self.next_entity_id + 1;
     }
 
     fn create_enemy(world: &mut World, x: f32, y: f32) {
@@ -194,45 +152,6 @@ impl Game {
                 ..Default::default()
             },
         );
-
-        // let entity_id = self.next_entity_id;
-
-        // self.move_targets.push(entity_id, MoveTarget::default());
-        // self.teams.push(entity_id, Team::new(1));
-        // self.healths.push(entity_id, Health::new(100));
-
-        // self.body_defense_colliders
-        //     .push(entity_id, BodyDefenseCollider::default());
-        // self.body_weapon_colliders
-        //     .push(entity_id, BodyWeaponCollider::default());
-
-        // self.positions.push(entity_id, Position { x: x, y: y });
-        // self.directions.push(entity_id, Direction::default());
-        // self.velocities.push(entity_id, Velocity::default());
-
-        // let mut animator = CharacterAnimator::default();
-        // animator.register(CharacterAnimID::Wait, Self::wait_animation());
-        // animator.register(CharacterAnimID::Attack, Self::attack_animation());
-        // animator.register(CharacterAnimID::Damaged, Self::damaged_animation());
-        // animator.play(CharacterAnimID::Wait);
-        // self.character_animators.push(entity_id, animator);
-
-        // self.health_bar_views.push(
-        //     entity_id,
-        //     StatusBarView::<StatusBarType::Health>::new(100, Color::GREEN),
-        // );
-
-        // self.character_views.push(
-        //     entity_id,
-        //     CharacterView {
-        //         color: Color::RED,
-        //         radius: 15f32,
-        //         radius_scale: 1f32,
-        //         ..Default::default()
-        //     },
-        // );
-
-        // self.next_entity_id = self.next_entity_id + 1;
     }
 }
 
@@ -646,7 +565,6 @@ impl State for Game {
                     Col(view.color),
                 );
             });
-        // System::process(window, &self.health_bar_views);
         Ok(())
     }
 }
