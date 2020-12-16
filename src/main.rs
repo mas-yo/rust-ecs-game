@@ -42,7 +42,7 @@ world! {
         Direction,
         Velocity,
         CharacterAnimator,
-        StatusBarView<StatusBarType::Health>,
+        StatusBarView<ForHealth>,
         CharacterView,
     }
 }
@@ -116,7 +116,7 @@ impl Game {
             Direction::default(),
             Velocity::default(),
             animator,
-            StatusBarView::<StatusBarType::Health>::new(24, Color::GREEN),
+            StatusBarView::<ForHealth>::new(24, Color::GREEN),
             CharacterView {
                 color: Color::GREEN,
                 radius: 10f32,
@@ -144,7 +144,7 @@ impl Game {
             Direction::default(),
             Velocity::default(),
             animator,
-            StatusBarView::<StatusBarType::Health>::new(24, Color::GREEN),
+            StatusBarView::<ForHealth>::new(24, Color::GREEN),
             CharacterView {
                 color: Color::RED,
                 radius: 15f32,
@@ -446,7 +446,7 @@ impl State for Game {
         });
 
         system!(self.world, |_entity_id,
-                             bar: &StatusBarView<StatusBarType::Health>,
+                             bar: &StatusBarView<ForHealth>,
                              health: &Health| {
             let mut new_bar = bar.clone();
             new_bar.current_length = (new_bar.frame_length as f32 * health.ratio()) as i32;
@@ -455,7 +455,7 @@ impl State for Game {
 
         system!(
             self.world,
-            |_entity_id, bar: &StatusBarView<StatusBarType::Health>, view: &CharacterView| {
+            |_entity_id, bar: &StatusBarView<ForHealth>, view: &CharacterView| {
                 let mut new_bar = bar.clone();
                 new_bar.position = view.position + Vector::new(10f32, -10f32);
                 if new_bar.animated_length != new_bar.current_length {
@@ -540,7 +540,7 @@ impl State for Game {
                     Col(view.color),
                 );
             });
-        component!(self.world, StatusBarView<StatusBarType::Health>)
+        component!(self.world, StatusBarView<ForHealth>)
             .iter()
             .for_each(|(_, view)| {
                 window.draw(

@@ -47,11 +47,10 @@ pub(crate) struct CharacterView {
     pub weapon_direction: f32,
 }
 
-pub(crate) mod StatusBarType {
-    #[derive(Default, Clone)]
-    pub struct Health();
-    // Heat(()),
-}
+#[derive(Default, Clone)]
+pub struct ForHealth();
+// Heat(()),
+
 #[derive(Default, Clone)]
 pub(crate) struct StatusBarView<T> {
     pub position: Vector,
