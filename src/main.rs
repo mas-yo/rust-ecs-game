@@ -273,7 +273,7 @@ impl State for Game {
                         .iter()
                         .filter(|(_, team)| team.team_id() != self_team.team_id())
                         .for_each(|(entity_id, _)| {
-                            if let Some(pos) = CContainer::<Position>::get(positions, entity_id) {
+                            if let Some(pos) = positions.get(entity_id) {
                                 let distance = pos.0.distance((self_pos.0.x, self_pos.0.y));
                                 if distance < 100f32 {
                                     new_target.0.x = pos.0.x;
