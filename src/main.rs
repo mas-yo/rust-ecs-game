@@ -5,6 +5,7 @@ extern crate log;
 extern crate static_ecs;
 use static_ecs::*;
 
+use std::collections::VecDeque;
 use quicksilver::prelude::*;
 use static_ecs::component::*;
 use std::f32::consts::*;
@@ -170,6 +171,9 @@ impl State for Game {
     ///
     /// By default it does nothing
     fn update(&mut self, _window: &mut Window) -> Result<()> {
+
+        let mut entity_id_to_remove = VecDeque::<EntityID>::new();
+
         system!(
             self.world,
             |_entity_id,
@@ -253,10 +257,13 @@ impl State for Game {
 
         system!(
             self.world,
-            |_entity_id, health: &Health, collider: &BodyDefenseCollider| {
+            |entity_id, health: &Health, collider: &BodyDefenseCollider| {
                 let mut new_health = health.clone();
                 if collider.hit {
-                    new_health.current_health -= 10;
+                    new_health.current_health = std::cmp::max(new_health.current_health - 10, 0);
+                    if new_health.current_health == 0 {
+                        entity_id_to_remove.push_back(entity_id);
+                    }
                 }
                 new_health
             }
@@ -466,6 +473,10 @@ impl State for Game {
                 new_bar
             }
         );
+
+        for id in entity_id_to_remove.drain(..) {
+            self.world.remove_component(id);
+        }
 
         Ok(())
     }
